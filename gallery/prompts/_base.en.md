@@ -25,6 +25,16 @@ You are going to make a short vertical ASCII-art reel with a single Python scrip
 - Put all scene times as `T_*` constants at the top of the script: that block reads as a timeline in the code panel.
 - Comments in English, lines under 72 characters (they are on screen).
 
+## Reference numbers (aim for a similar look, not pixel-exact)
+- Coordinates: screen `X` runs -1..1 across the width (0 = centre), `Y` runs 0 (top) .. 1 (bottom of the render). 3D model units: 1 = half the screen width, y points down, z points toward the viewer.
+- Projection: `k = f / (f - z)` with `f = 3.2`; screen `X = x*k*scale`, `Y = cy + y*k*scale*540/1098` (so x and y share one unit).
+- Point colour = `rgb * (0.35 + 0.9 * brightness)`. Lighting: key light from upper front `(0, -0.8, 0.6)`, rim light circling at 0.9 rad/s weighted by `(1 - |n.z|)^1.5`, specular exponent 12.
+- Bloom: downscale to 1/4, Gaussian blur radius 3, upscale bilinear, add x0.9-1.1.
+- Status block: regular monospace 30 px, colour #e8eaee, 40 px line spacing, 22 px from the left, bottom line 22 px above the code panel. Clock: same font, pink #ff6b9e, top-right, about 37 px from the top.
+- Code panel: header bar 62 px, #1e2026, file name 26 px. Code: regular monospace 24 px, line height 36 px, line numbers 20 px #4e5460 in a 64 px gutter, background #16181d. Colours: keywords #c678dd, functions #61afef, strings #98c379, numbers #d19a66, comments #6a737d, UPPER_CASE constants #56b6c2, other text #dcdfe4. The highlighted line sits 6 lines below the top of the panel, background lifted by about +0.06; the cursor is a 13 px pink block blinking at 2.5 Hz.
+- Big caption (only if the storyboard has text): bold monospace 46 px, letter spacing +35 %, centred.
+- Encoding: `ffmpeg -f rawvideo -pix_fmt rgb24 -s 1080x1920 -r 30 -i - -c:v libx264 -preset medium -crf 17 -pix_fmt yuv420p -movflags +faststart`.
+
 ## How to work
 1. First show me the storyboard below as a table (scenes, times, motion, colours, climax) and wait for my OK or changes.
 2. Write the script. Render still frames at the middle of every scene and look at them yourself: check that nothing is cut off, nothing overlaps the status block, the climax is the brightest moment and the loop seam is clean. Fix and repeat.

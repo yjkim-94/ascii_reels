@@ -15,6 +15,15 @@ Palette
 - Rings: beige (0.90, 0.82, 0.65).
 - Climax: gold (1.00, 0.85, 0.45) and white.
 
+Key motion values
+- Layout: `cy = 0.42`, `scale = 1.15`; the whole system is rolled -0.22 rad (tipped sideways). Tilt = rotation about the x axis by -tilt.
+- Dust: each grain starts after a random 0-1.4 s delay and takes about 3.1 s (smoothstep) to land. Its disk angle is `a0 + 0.9 t + (1 - k) * 3.0` so it unwinds into place. Loose dust brightness is random 0.15-0.5 and fades in over the first 0.6 s.
+- Landing flash: add `0.9 * exp(-((t - 4.55) / 0.18)^2)` to the planet brightness.
+- Bands: `b = sin(19 lat) + 0.45 sin(47 lat + 1.3)`; b > 0.6 cream, b > -0.4 amber, else deep.
+- Rings: a particle at radius r starts moving out at `6.0 + (r - 0.35) * 6` s and takes 1.2 s (smoothstep) from the planet surface to r. Orbit speed `0.55 * (r / 0.35)^-1.5` rad/s. Ring brightness = optical depth x (0.25 + 0.55 x how much the ring plane faces the light), x0.35 inside the planet shadow; in the climax add 0.9 x depth x back-light amount.
+- Sun: position `(-0.10 - 0.30 k, -0.05 - 0.22 k, -1.2)` with k = smoothstep over 9.5-12 s; the key light direction blends from front-left `(-0.5, -0.6, 0.65)` to the sun direction. Rays are 0.06-0.28 long.
+- Planet colour blends 60 % toward gold during the climax; the crescent rim adds `0.8 * k * (1 - |n.z|)^2`.
+
 Scenes
 | # | time (s) | what happens | dynamic point | counters |
 |---|---|---|---|---|

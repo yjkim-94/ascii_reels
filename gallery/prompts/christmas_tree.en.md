@@ -15,6 +15,12 @@ Objects
 
 Palette: letter rain (0.09, 0.11, 0.20); tree green (0.20, 1.00, 0.36) x brightness; bulbs gold (1.0, 0.85, 0.4), red, sky, pink; greeting and star gold (1.0, 0.78, 0.35).
 
+Key layout values
+- Tree spans Y 0.11-0.73; trunk down to Y 0.79; ground band Y 0.80-0.82; greeting at Y 0.84.
+- Tiers along the tree height h (0 top .. 1 bottom): spans (0.00-0.40), (0.27-0.71), (0.56-1.00); radius grows from (0.02 -> 0.40), (0.16 -> 0.60), (0.26 -> 0.80) as `r0 + (r1 - r0) * u^0.9`. The top 34 % of each lower tier is darkened (x0.25 -> 1) as the shadow of the tier above.
+- Fake spin: for a cell inside the tree, `phi = asin(X / R)`, facing `z = cos(phi)`, brightness `(0.35 + 0.85 z^1.3) x shade`, letter index `floor((phi + 0.55 t) * R / 0.0185) + row * 5` over the word.
+- Gifts: centres at X -0.66, -0.47, 0.55, 0.72; widths 14, 9, 12, 8 cells; heights 6, 4, 7, 4 rows; colours blue/gold ribbon, red/white, pink/white, green/red.
+
 Scenes
 | # | time (s) | what happens | dynamic point | counters |
 |---|---|---|---|---|
