@@ -1,4 +1,11 @@
 {
+  "christmas_tree": {
+    "title": "Christmas Tree",
+    "desc": {
+      "ko": "빛의 리본이 트리를 그리고, 별이 점화되며 불꽃놀이가 터진다",
+      "en": "A ribbon of light draws the tree, the star ignites and fireworks burst"
+    }
+  },
   "rose": {
     "title": "Rose",
     "desc": {
