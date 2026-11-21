@@ -149,7 +149,7 @@ N_HAIR = 30
 HA_L = rng.uniform(0.7, 1.1, N_HAIR)
 HA_O = rng.uniform(-0.07, 0.03, N_HAIR)
 HA_PH = rng.uniform(0, 2 * np.pi, N_HAIR)
-HS = np.linspace(0, 1, 34)
+HS = np.linspace(0, 1, 60)
 GLYPH = {CIDX[c]: c for c in "|/\\-"}
 
 # background
@@ -298,11 +298,11 @@ def goddess(t, a_g, sp):
     reach = smooth(ramp(t, *T_REACH)) * (1 - smooth(ramp(t, 11.6,
                                                          12.0)))
     spread = smooth(ramp(t, *T_ARMS)) * (1 - smooth(ramp(t, *T_DOWN)))
-    swing = 0.06 * np.sin(ph) * moving
     s16 = np.linspace(0, 1, 18)
     for side in (1, -1):                       # front, back arm
         sx, sy = at(0.07 * side, 0.76)
-        hx_, hy_ = at(0.06 * side + swing * side, 0.46)
+        # hands clasped softly in front of the waist while walking
+        hx_, hy_ = at(0.10 + 0.012 * side, 0.50 + 0.008 * side)
         if side == 1:                          # the front arm reaches
             hx_ += (TOUCH[0] - hx_) * reach
             hy_ += (TOUCH[1] - hy_) * reach
@@ -324,16 +324,21 @@ def goddess(t, a_g, sp):
         sp["ch"].append("o")
         sp["size"].append(13)
         sp["rgb"].append(col)
-    # hair: strands down her back, the ends drift; the crown shines
+    # hair: curled strands down her back to the waist; crown shines
     for j in range(N_HAIR):
         s = HS
-        wave = 0.06 * np.sin(2.3 * t - 5 * s + HA_PH[j]) * s ** 1.5
-        trail = (0.10 + 0.10 * moving + 0.06 * spread) * s ** 2
-        hu = HA_O[j] - 0.04 - 0.10 * s * HA_L[j] - trail + wave
-        hv = 0.97 - s * 0.55 * HA_L[j]
+        # soft curls falling to the waist; the ends sway gently
+        turn = 2 * np.pi * (2.5 + HA_L[j]) * s + HA_PH[j]
+        curl = 0.028 * s ** 0.8
+        wave = 0.03 * np.sin(2.3 * t - 5 * s + HA_PH[j]) * s ** 1.5
+        trail = (0.04 + 0.05 * moving + 0.06 * spread) * s ** 2
+        hu = HA_O[j] - 0.04 - 0.08 * s * HA_L[j] - trail + wave \
+            + curl * np.sin(turn)
+        hv = 0.97 - s * (0.40 + 0.08 * HA_L[j]) \
+            + 0.4 * curl * np.cos(turn)
         xs, ys = at(hu, hv)
         col = (EMERALD if j % 2 else MINT) * (1.2 - 0.5 * s)[:, None]
-        col = col + 0.4 * np.exp(-s / 0.12)[:, None]
+        col = col + 0.15 * np.exp(-s / 0.08)[:, None]
         strand(xs, ys, col * a_g)
     return xg
 
