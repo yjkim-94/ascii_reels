@@ -9,5 +9,16 @@
     "storyboard": "storyboards/christmas_tree.md",
     "size_mb": 15.6,
     "updated": "2026-11-21"
+  },
+  {
+    "slug": "saturn",
+    "title": "Saturn",
+    "duration": 15.0,
+    "video": "videos/saturn.mp4",
+    "poster": "posters/saturn.jpg",
+    "theme": "themes/saturn.py",
+    "storyboard": "storyboards/saturn.md",
+    "size_mb": 11.6,
+    "updated": "2026-11-21"
   }
 ]
