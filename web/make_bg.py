@@ -13,8 +13,8 @@ sys.path.insert(0, str(ROOT))
 from engine import CHARS, Renderer  # noqa: E402
 
 # (테마, 시각) - 형체가 완성된 순간
-PICKS = [("saturn", 12.6), ("saturn", 8.0), ("saturn", 3.0),
-         ("saturn", 11.0)]
+PICKS = [("saturn", 12.6), ("rose", 12.4), ("saturn", 8.0),
+         ("rose", 9.0)]
 LIGHT = 0.28        # 이보다 어두운 칸(배경 글자비, 흐린 별)은 버린다
 
 

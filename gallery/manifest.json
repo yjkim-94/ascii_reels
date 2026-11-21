@@ -10,5 +10,17 @@
     "size_mb": 11.6,
     "updated": "2026-11-21",
     "poster_web": "posters/saturn_web.jpg"
+  },
+  {
+    "slug": "rose",
+    "title": "Rose",
+    "duration": 15.0,
+    "video": "videos/rose.mp4",
+    "poster": "posters/rose.jpg",
+    "poster_web": "posters/rose_web.jpg",
+    "theme": "themes/rose.py",
+    "storyboard": "storyboards/rose.md",
+    "size_mb": 7.3,
+    "updated": "2026-11-21"
   }
 ]

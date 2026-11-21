@@ -1,4 +1,11 @@
 {
+  "rose": {
+    "title": "Rose",
+    "desc": {
+      "ko": "빛이 땅으로 스며들어 줄기가 자라고, 진홍 장미가 한 장씩 피어난다",
+      "en": "Light sinks into the soil, a stem rises and a crimson rose opens petal by petal"
+    }
+  },
   "saturn": {
     "title": "Saturn",
     "desc": {
