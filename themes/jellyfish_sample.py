@@ -1,8 +1,9 @@
-"""jellyfish_sample: 3 s render test (point cloud, pulse, colour wave)."""
+"""jellyfish_sample: 3 s render test (points, pulse, colours)."""
 import numpy as np
 from engine import (Snow, dir_chars, ramp, rot_x, rot_y,
                     smooth, splat)
 
+TITLE = "Jellyfish (render test)"
 HANDLE = "@ascii.reels"
 DURATION = 3.0
 GLOW = 1.0
@@ -15,6 +16,9 @@ TILT = 0.32           # lean toward camera so we see the dome
 T_LIGHT = 0.6         # colour wave starts
 WAVE_SPEED = 0.9      # body lengths / s
 N_TENT = 14
+SCENES = [("beat 1", 0.0, 1.5), ("colour wave", 0.6, 1.7),
+          ("beat 2", 1.5, 3.0)]
+POSTER_T = 2.0
 
 PALETTES = [  # (stripe, between stripes, arms)
     ((0.20, 0.32, 1.00), (0.55, 0.72, 1.00), (0.55, 0.45, 1.0)),

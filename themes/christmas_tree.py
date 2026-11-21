@@ -3,6 +3,7 @@ import numpy as np
 from engine import (CIDX, LetterRain, Snow, ease, idx,
                     pop, ramp, smooth)
 
+TITLE = "Christmas Tree"
 HANDLE = "@ascii.reels"
 WORD = "MERRYCHRISTMASJOYPEACE"
 GREETING = "MERRY CHRISTMAS 2026"
@@ -21,6 +22,11 @@ T_GIFT = (8.0, 9.6)       # gift boxes pop in
 T_TEXT = (9.4, 11.6)      # greeting types out
 T_FADE = (13.2, 14.6)     # fade out, then loop
 SPIN = 0.55               # rad / s
+SCENES = [("ground + trunk", 0.0, 1.0), ("tree grows", *T_TREE),
+          ("lights + ornaments", 4.5, 7.8), ("star + gifts", 7.6, 9.6),
+          ("greeting", *T_TEXT), ("hold", 11.6, 13.2),
+          ("fade", *T_FADE)]
+POSTER_T = 12.4           # gallery thumbnail time
 
 # ---------- layout (Y: 0 top .. 1 bottom) ----------
 TREE_TOP, TREE_BOT = 0.11, 0.73
@@ -194,7 +200,7 @@ def draw(g, t):
     # 9) greeting types out
     pt = ramp(t, *T_TEXT)
     n_typed = int(round(pt * len(GREETING)))
-    blink = pt < 1 and int(t * 4) % 2 == 0
+    blink = 0 < pt < 1 and int(t * 4) % 2 == 0
     warm = np.array([1.0, 0.78, 0.35]) * fade
     caption = (GREETING, n_typed, TEXT_Y, warm, 46, 0.35, blink)
 

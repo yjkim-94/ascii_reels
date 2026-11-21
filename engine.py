@@ -96,15 +96,23 @@ class Grid:
         self.X = ((c + 0.5) * CW - W / 2) / (W / 2)
         self.Y = (r + 0.5) * CH / TOP_H
 
+    def _write(self, rr, cc, chars, colors):
+        """이미 있는 글자보다 어두운 글자는 덮지 않는다(밝기 최댓값 합성).
+        사라지는 물체가 배경을 검게 가리지 않고, 페이드 때 배경이 자연스럽게 드러난다."""
+        old = self.col[rr, cc].max(-1)
+        new = colors.max(-1)
+        m = new >= old
+        self.ch[rr[m], cc[m]] = chars[m]
+        self.col[rr[m], cc[m]] = colors[m]
+
     def put(self, mask, chars, color, alpha=1.0):
         """mask 칸에 글자와 색을 쓴다. chars/color는 하나 또는 mask 개수만큼."""
-        if not np.any(mask):
+        rr, cc = np.nonzero(mask)
+        if len(rr) == 0:
             return
-        chars = np.asarray(chars)
-        if chars.dtype.kind in "US":
-            chars = idx("".join(chars.ravel())) if chars.ndim else CIDX.get(str(chars), 0)
-        self.ch[mask] = chars
-        self.col[mask] = np.asarray(color, np.float32) * alpha
+        chars = np.broadcast_to(np.asarray(chars), rr.shape)
+        colors = np.broadcast_to(np.asarray(color, np.float32) * alpha, rr.shape + (3,))
+        self._write(rr, cc, chars, colors)
 
     def put_cells(self, rr, cc, chars, colors):
         """흩어진 점(행, 열 배열)을 찍는다. 화면 밖 점은 버린다."""
@@ -112,8 +120,7 @@ class Grid:
         ok = (rr >= 0) & (rr < ROWS) & (cc >= 0) & (cc < COLS)
         chars = np.broadcast_to(np.asarray(chars), rr.shape)[ok]
         colors = np.broadcast_to(np.asarray(colors, np.float32), rr.shape + (3,))[ok]
-        self.ch[rr[ok], cc[ok]] = chars
-        self.col[rr[ok], cc[ok]] = colors
+        self._write(rr[ok], cc[ok], chars, colors)
 
     def text(self, row, col, s, color):
         cc = col + np.arange(len(s))
@@ -172,8 +179,7 @@ def splat(g, P, rgb, lum, chars=None, cy=0.5, scale=1.0, f=3.2):
     if chars is not None:
         own = np.asarray(chars)[sel]
         ch = np.where(own >= 0, own, ch)
-    g.ch[rr[sel], cc[sel]] = ch
-    g.col[rr[sel], cc[sel]] = rgb[sel] * (0.35 + 0.9 * L)[:, None]
+    g._write(rr[sel], cc[sel], ch, (rgb[sel] * (0.35 + 0.9 * L)[:, None]).astype(np.float32))
     return len(sel)
 
 

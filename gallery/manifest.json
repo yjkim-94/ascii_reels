@@ -1,0 +1,13 @@
+[
+  {
+    "slug": "christmas_tree",
+    "title": "Christmas Tree",
+    "duration": 15.0,
+    "video": "videos/christmas_tree.mp4",
+    "poster": "posters/christmas_tree.jpg",
+    "theme": "themes/christmas_tree.py",
+    "storyboard": "storyboards/christmas_tree.md",
+    "size_mb": 15.6,
+    "updated": "2026-11-21"
+  }
+]
