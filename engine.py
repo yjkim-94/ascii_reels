@@ -133,6 +133,44 @@ class Grid:
         return rr, cc
 
 
+# ---------- 카메라 ----------
+def apply_camera(img, t, zoom=1.0, focus=(0.0, 0.5), pan=(0.0, 0.0),
+                 roll=0.0, shake=0.0):
+    """위쪽 화면 전체(그림 층, 글자, 스프라이트, 빛 번짐)에 카메라 움직임을 준다.
+
+    zoom: 배율(1 = 그대로). focus: 화면에 고정된 채 확대되는 점 (X -1..1, Y 0..1).
+    pan: 화면을 (X, Y) 단위만큼 민다(+X 오른쪽, +Y 아래로 장면이 움직임).
+    roll: 화면 회전(rad). shake: 흔들림 세기(X 단위, 0.01이면 약 5px), t로 정해진다.
+    상태 글자, 경과 시간, 코드 패널은 움직이지 않는다.
+    """
+    if zoom == 1.0 and roll == 0.0 and shake == 0.0 and pan == (0.0, 0.0):
+        return img
+    sx = shake * (np.sin(37.1 * t) + 0.6 * np.sin(53.3 * t + 1.3))
+    sy = shake * (np.sin(41.7 * t + 0.4) + 0.6 * np.sin(61.9 * t + 2.1))
+    fx = (focus[0] + 1) / 2 * W
+    fy = focus[1] * TOP_H
+    px = (pan[0] + sx) * W / 2
+    py = (pan[1] + sy) * W / 2
+    c, s_ = np.cos(roll), np.sin(roll)
+    # 출력 화소 -> 원본 화소: in = F + R(-roll)(out - F - pan) / zoom
+    a, b = c / zoom, s_ / zoom
+    d, e = -s_ / zoom, c / zoom
+    ox, oy = -fx - px, -fy - py
+    data = (a, b, fx + a * ox + b * oy, d, e, fy + d * ox + e * oy)
+    u8 = Image.fromarray((np.clip(img, 0, 1) * 255).astype(np.uint8))
+    out = u8.transform((W, TOP_H), Image.AFFINE, data, Image.BILINEAR)
+    return np.asarray(out, np.float32) / 255.0
+
+
+def orbit(P, yaw=0.0, pitch=0.0, target=(0.0, 0.0, 0.0), dolly=0.0):
+    """3D 카메라: target을 중심으로 돌아보고(yaw, pitch) 다가간다(dolly, +면 가까이).
+    splat 전에 점들에 적용한다. 2D 카메라와 달리 앞뒤가 다르게 움직여 입체감(시차)이 생긴다."""
+    T = np.asarray(target, np.float32)
+    Q = rot_x(rot_y(np.asarray(P, np.float32) - T, yaw), pitch) + T
+    Q[:, 2] += dolly
+    return Q
+
+
 # ---------- 3D 점 구름 ----------
 def rot_y(P, a):
     """세로축 회전. P: (N, 3) = (x 오른쪽, y 아래, z 화면 앞쪽)."""
@@ -637,6 +675,8 @@ class Renderer:
         top = bloom(top, getattr(self.theme, "GLOW", 0.9))
         if res.get("under") is not None:       # 그림 층은 빛 번짐 없이 맨 아래
             top = top + upscale(res["under"])
+        if res.get("camera"):                  # 화면 전체 카메라(상태 글자 제외)
+            top = apply_camera(top, t, **res["camera"])
         frame = np.zeros((H, W, 3), np.float32)
         frame[:TOP_H] = top
         self.panel.draw(frame, t, self.duration)

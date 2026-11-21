@@ -66,6 +66,9 @@ Claude Code에서는 `/new-reel <주제>`가 이 순서를 따른다(`.claude/sk
      `noise2d(n, beta, seed)`(이음새 없는 1/f^beta 노이즈, 구름·언덕), `sample(tex, u, v)`(반복 읽기).
    - 바닥 평면 원근: `ground(x, z, horizon, cam)` -> (화면 X, Y, 크기 배율 = 1/z), 반대 방향은 `ground_uv`.
    - 크기가 다른 글자: `{"sprites": dict(x, y, ch, size, rgb)}`. 격자와 상관없이 원하는 위치·px 크기로 찍는다(멀수록 작게).
+   - 카메라: `{"camera": dict(zoom, focus, pan, roll, shake)}`를 돌려주면 위쪽 화면 전체(그림 층·글자·스프라이트)가 움직인다.
+     상태 글자, 경과 시간, 코드 패널은 고정. zoom은 1 이상(1 미만이면 가장자리가 비어 보임). 반복 재생을 위해 끝 값은 0초 값과 같게.
+     3D 물체의 진짜 회전·접근(시차)은 `orbit(P, yaw, pitch, target, dolly)`를 splat 전에 적용한다.
    - 바닥 반사: `splat_reflection(g, P, rgb, lum, floor_y)`를 본체 `splat` 전에 부른다.
    - 코드 패널의 타이핑 커서와 오른쪽 위 경과 시간(`● t 1.23s`)은 엔진이 자동으로 그린다. 끄려면 `SHOW_CLOCK = False`.
 5. 시간 도우미: `ramp(t, a, b)`, `ease`(빠르게 시작), `smooth`(고르게), `pop`(튀어나옴).

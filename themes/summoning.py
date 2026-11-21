@@ -221,6 +221,37 @@ def phoenix_state(t):
     return k, spread, cy, 0.35 + 0.65 * k
 
 
+# ---------- camera: keyframes (time, zoom, focus X, focus Y) ----------
+def _mage_focus(e):
+    X, Y, _ = proj(MAGE[e, 0], 0.5, MAGE[e, 1])
+    return float(X), float(Y)
+
+
+CAM_KEYS = [(0.0, 1.18, 0.0, 0.62), (2.6, 1.0, 0.0, 0.60)]
+for _e, _s in enumerate([3.0, 5.0, 7.0, 9.0]):  # push in on each cast
+    _fx, _fy = _mage_focus(_e)
+    CAM_KEYS += [(_s + 0.1, 1.0, _fx, _fy), (_s + 0.8, 1.14, _fx, _fy),
+                 (_s + 1.7, 1.14, _fx, _fy), (_s + 2.0, 1.0, _fx, _fy)]
+CAM_KEYS += [(11.0, 1.0, 0.0, 0.50), (12.4, 1.12, 0.0, 0.35),
+             (13.0, 1.12, 0.0, 0.35), (13.3, 1.0, 0.0, 0.35),
+             (14.0, 1.0, 0.0, 0.33), (18.5, 1.12, 0.0, 0.33),
+             (20.0, 1.18, 0.0, 0.62)]                # back to frame 0
+
+
+def camera(t):
+    ks = CAM_KEYS
+    i = max(j for j in range(len(ks)) if ks[j][0] <= t)
+    k0, k1 = ks[i], ks[min(i + 1, len(ks) - 1)]
+    u = smooth(ramp(t, k0[0], k1[0])) if k1[0] > k0[0] else 0.0
+    z, fx, fy = (a + (b - a) * u for a, b in zip(k0[1:], k1[1:]))
+    hit = t - 13.3                                  # phoenix impact
+    shake = 0.012 * np.exp(-hit / 0.4) if hit > 0 else 0.0
+    shake += 0.003 * smooth(ramp(t, 12.0, 13.0)) * (t < 13.3)
+    pk = smooth(ramp(t, 13.0, 14.0)) * (1 - ease(ramp(t, *T_FADE)))
+    return dict(zoom=z, focus=(fx, fy), shake=shake,
+                roll=0.015 * np.sin(0.5 * t) * pk)
+
+
 def draw(g, t):
     fade = 1 - ease(ramp(t, *T_FADE))
     cast = [ramp(t, s, s + 2.0) for s in T_CAST]   # 0..1 per mage
@@ -477,7 +508,7 @@ def draw(g, t):
     n_lit = int((g.col.max(-1) > 0.05).sum())
     elements = sum(c >= 0.6 for c in cast)
     mana = 17.5 * sum(min(c, 1) for c in cast) + 30 * ku
-    return {"under": np.clip(under, 0, 1),
+    return {"under": np.clip(under, 0, 1), "camera": camera(t),
             "hud": [HANDLE,
                     f"runes {n_runes:2d}   elements {elements}   "
                     f"mana {mana:3.0f}%",
