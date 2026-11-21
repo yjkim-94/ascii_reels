@@ -183,6 +183,50 @@ def splat(g, P, rgb, lum, chars=None, cy=0.5, scale=1.0, f=3.2):
     return len(sel)
 
 
+# ---------- 조명 ----------
+VIEW = np.array([0.0, 0.0, 1.0])            # 카메라 쪽(+z)
+
+
+def _unit(v):
+    v = np.asarray(v, float)
+    return v / np.linalg.norm(v)
+
+
+def light(n, t, seed=None, key=(0.0, -0.8, 0.6), rim_speed=0.9,
+          ambient=0.12, key_w=0.55, rim_w=0.55, spec_w=0.6,
+          glint_rate=3.0, glint_cut=0.45):
+    """화면 기준 법선 n(N,3) -> 밝기(N,)와 반짝임 여부(N,).
+
+    주광(key): 위 앞쪽에서 고정. 테두리광(rim): 물체 둘레를 돌며 윤곽을 밝힌다.
+    반짝임(glint): 주광 반사(spec)가 센 점이 점마다 다른 박자로 번쩍인다.
+    seed: 점마다 고정 난수(N,) - 없으면 법선으로 만든다(같은 점은 같은 박자).
+    """
+    n = n / np.maximum(np.linalg.norm(n, axis=1, keepdims=True), 1e-9)
+    k = _unit(key)
+    r = _unit([np.cos(t * rim_speed), -0.4, np.sin(t * rim_speed)])
+    diff = np.clip(n @ k, 0, 1)
+    edge = (1 - np.abs(n[:, 2])) ** 1.5
+    rim = np.clip(n @ r, 0, 1) * edge
+    h = _unit(k + VIEW)
+    spec = np.clip(n @ h, 0, 1) ** 12
+    if seed is None:
+        seed = (np.abs(np.sin(n @ np.array([12.9, 78.2, 37.7]) * 43758.5))) % 1
+    # 밝은 면(반사 + 윤곽)일수록 자주, 점마다 다른 박자로 짧게 번쩍인다
+    tw = np.clip(np.sin(t * glint_rate + seed * 6.283), 0, 1) ** 8
+    glint = (0.6 * spec + 0.6 * rim + 0.3 * diff) * tw > glint_cut
+    lum = ambient + key_w * diff + rim_w * rim + spec_w * spec + 0.6 * glint
+    return lum, glint
+
+
+def splat_reflection(g, P, rgb, lum, floor_y, strength=0.22, depth=0.35, **kw):
+    """바닥(y = floor_y)에 비친 흐린 거울상. 본체보다 먼저 그린다.
+    depth: 바닥에서 이만큼 멀어지면 반사가 완전히 사라진다."""
+    Q = P.copy()
+    Q[:, 1] = 2 * floor_y - P[:, 1]
+    fall = np.clip(1 - (Q[:, 1] - floor_y) / depth, 0, 1) ** 1.5
+    return splat(g, Q, rgb * strength, lum * fall, **kw)
+
+
 # ---------- 배경 도우미 ----------
 class LetterRain:
     """화면 전체에 흐리게 깔리는 글자. 열마다 다른 속도로 천천히 내려온다."""
@@ -245,6 +289,7 @@ def bloom(img, strength=0.9):
 CODE_FONT = 24
 LINE_H = 36
 GUTTER = 64
+CURSOR = np.array([1.0, 0.42, 0.62], np.float32)   # 커서, 경과 시간 표시색
 CODE_COLORS = {
     "kw": (198, 120, 221), "func": (97, 175, 239), "str": (152, 195, 121),
     "num": (209, 154, 102), "com": (106, 115, 125), "const": (86, 182, 194),
@@ -299,6 +344,7 @@ class CodePanel:
         self.filename, self.fps = filename, fps
         lines = source.rstrip("\n").split("\n")
         self.n = len(lines)
+        self.widths = []
         font = ImageFont.truetype(MONO, CODE_FONT)
         small = ImageFont.truetype(MONO, 20)
         sheet = Image.new("RGB", (W, (self.n + 30) * LINE_H), (22, 24, 29))
@@ -310,6 +356,7 @@ class CodePanel:
             for text, color in segs:
                 d.text((x, y), text, font=font, fill=color)
                 x += font.getlength(text)
+            self.widths.append(x)
         self.sheet = np.asarray(sheet, np.float32) / 255.0
         self.visible = (H - CODE_Y) // LINE_H
 
@@ -337,6 +384,10 @@ class CodePanel:
         top = CODE_Y + hl * LINE_H - y0
         if CODE_Y <= top < H - LINE_H:
             frame[top:top + LINE_H] += np.array([0.05, 0.06, 0.09], np.float32)
+            # 지금 타이핑 중인 것처럼 줄 끝에 깜빡이는 블록 커서
+            if hl < self.n and int(t * 2.5) % 2 == 0:
+                cx = int(min(self.widths[hl] + 4, W - 16))
+                frame[top + 5:top + LINE_H - 5, cx:cx + 13] = CURSOR
 
 
 # ---------- 큰 글씨 자막 ----------
@@ -365,15 +416,20 @@ def caption_layer(text, shown, y, color, size=46, spacing=0.35, cursor=False):
 _HUD_FONT = None
 
 
-def draw_hud(img_u8, lines):
-    """위쪽 화면 왼쪽 아래에 상태 글자(손잡이, 회전각, 전구 수 등)를 얹는다."""
+def draw_hud(img_u8, lines, t=None):
+    """위쪽 화면 왼쪽 아래 상태 글자, 오른쪽 위 경과 시간(● t 3.27s)."""
     global _HUD_FONT
-    if not lines:
-        return img_u8
     if _HUD_FONT is None:
         _HUD_FONT = ImageFont.truetype(MONO, 30)
     im = Image.fromarray(img_u8)
     d = ImageDraw.Draw(im)
+    if t is not None:
+        pink = tuple(int(v * 255) for v in CURSOR)
+        label = f"t {t:5.2f}s"
+        x = W - 24 - _HUD_FONT.getlength(label)
+        d.ellipse((x - 26, 30, x - 12, 44), fill=pink)
+        d.text((x, 37), label, font=_HUD_FONT, fill=pink, anchor="lm")
+    lines = lines or []
     y = TOP_H - 22 - len(lines) * 40
     for ln in lines:
         d.text((22, y), ln, font=_HUD_FONT, fill=(232, 234, 238))
@@ -415,7 +471,8 @@ class Renderer:
         frame[:TOP_H] = top
         self.panel.draw(frame, t, self.duration)
         out = (np.clip(frame, 0, 1) * 255).astype(np.uint8)
-        return draw_hud(out, res.get("hud"))
+        clock = t if getattr(self.theme, "SHOW_CLOCK", True) else None
+        return draw_hud(out, res.get("hud"), clock)
 
     def still(self, t, path):
         Image.fromarray(self.frame(t)).save(path)

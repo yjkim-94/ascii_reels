@@ -19,7 +19,8 @@ ffmpeg(libx264)와 DejaVu 글꼴(`/usr/share/fonts/truetype/dejavu/`)이 필요�
 - `engine.py`: 글자 아틀라스, `Grid`(108x61 칸), 3D 점 구름(`splat`), 배경(`LetterRain`, `Snow`), 빛 번짐,
   큰 글씨 자막, HUD, 코드 패널, mp4 인코딩. 주제와 무관한 것은 모두 여기.
 - `themes/*.py`: 주제 하나 = 파일 하나. 이 파일이 그대로 영상 하단에 나온다.
-  `christmas_tree.py`(2D 마스크, 15초), `jellyfish_sample.py`(3D 점 구름, 3초 렌더 시안).
+  `christmas_tree.py`(2D 마스크, 15초), `jellyfish_sample.py`(3D 점 구름, 3초 시안),
+  `crystal_sample.py`(조명·반짝임·바닥 반사, 3초 시안).
 - `storyboards/*.md`: 주제별 스토리보드. `_template.md`를 복사해 쓴다.
 - `render.py`: 영상/정지 화면. `check.py`: 자동 점검 + 점검 시트. `publish.py`: 갤러리 등록.
 - `gallery/`: 웹사이트가 읽을 영상, 썸네일, `manifest.json`.
@@ -53,6 +54,9 @@ Claude Code에서는 `/new-reel <주제>`가 이 순서를 따른다(`.claude/sk
    - 3D: 점 (N,3)을 `rot_y`/`rot_x`로 돌리고 `splat(g, P, rgb, lum, chars)`로 찍는다.
      원근 투영, 칸마다 가장 앞 점만 남기기(z-buffer), 밝기 -> 잉크 면적 순 글자(`RAMP`)를 엔진이 한다.
      선(촉수, 빛줄기)은 `dir_chars(dx, dy)`로 `| / \ -` 글자를 쓴다.
+   - 조명: `light(n, t)` - 화면 기준 법선으로 주광, 회전 테두리광, 반사광, 반짝임(glint)을 계산해 (밝기, 반짝임 여부)를 준다.
+   - 바닥 반사: `splat_reflection(g, P, rgb, lum, floor_y)`를 본체 `splat` 전에 부른다.
+   - 코드 패널의 타이핑 커서와 오른쪽 위 경과 시간(`● t 1.23s`)은 엔진이 자동으로 그린다. 끄려면 `SHOW_CLOCK = False`.
 5. 시간 도우미: `ramp(t, a, b)`, `ease`(빠르게 시작), `smooth`(고르게), `pop`(튀어나옴).
 6. 플롯: `T_*` 구간 상수로 "바탕 → 형체가 자람 → 장식이 하나씩 → 마지막 한 방(별/꽃/문구) → 페이드아웃"을
    0~15초에 배치. 끝은 처음 화면(배경만)과 같게 해서 반복 재생이 이어지게 한다.
