@@ -227,6 +227,60 @@ def splat_reflection(g, P, rgb, lum, floor_y, strength=0.22, depth=0.35, **kw):
     return splat(g, Q, rgb * strength, lum * fall, **kw)
 
 
+# ---------- 실사 영상 소스 ----------
+class Footage:
+    """영상/이미지 파일 -> 칸 해상도(108x61) 프레임 묶음. 처음에 한 번 다 읽어 둔다.
+
+    위쪽 화면 비율에 맞게 가운데를 잘라 채운다(cover). start/length로 쓸 구간(초)을 고른다.
+    """
+
+    def __init__(self, path, fps=30, start=0.0, length=None):
+        path = Path(path)
+        if not path.is_absolute():
+            path = Path(__file__).resolve().parent / path
+        vf = (f"fps={fps},scale={W}:{TOP_H}:force_original_aspect_ratio=increase,"
+              f"crop={W}:{TOP_H},scale={COLS}:{ROWS}:flags=area")
+        cmd = ["ffmpeg", "-loglevel", "error", "-ss", str(start), "-i", str(path)]
+        if length:
+            cmd += ["-t", str(length)]
+        cmd += ["-vf", vf, "-f", "rawvideo", "-pix_fmt", "rgb24", "-"]
+        raw = subprocess.run(cmd, capture_output=True, check=True).stdout
+        n = len(raw) // (ROWS * COLS * 3)
+        if n == 0:
+            raise ValueError(f"소스에서 프레임을 읽지 못함: {path}")
+        self.frames = np.frombuffer(raw[: n * ROWS * COLS * 3], np.uint8)
+        self.frames = self.frames.reshape(n, ROWS, COLS, 3).astype(np.float32) / 255.0
+        self.fps = fps
+
+    def at(self, t, loop=True):
+        i = int(t * self.fps)
+        n = len(self.frames)
+        return self.frames[i % n if loop else min(i, n - 1)]
+
+
+def draw_footage(g, img, gain=1.0, gamma=0.9, floor=0.07, mask=None, alpha=1.0):
+    """소스 프레임(ROWS, COLS, 3) -> 칸마다 밝기 계단 글자 + 원본 색.
+
+    floor보다 어두운 칸은 비운다(배경이 보인다). gamma < 1이면 어두운 부분이 살아난다.
+    mask(ROWS, COLS)를 주면 그 칸만 그린다(드러남 연출). 반환값은 그린 칸 수.
+    """
+    lum = img @ np.array([0.2126, 0.7152, 0.0722], np.float32)
+    L = np.clip((lum * gain - floor) / (1 - floor), 0, 1) ** gamma
+    m = L > 0.02
+    if mask is not None:
+        m &= mask
+    rr, cc = np.nonzero(m)
+    if len(rr) == 0:
+        return 0
+    Lm = L[rr, cc]
+    ch = RAMP[(Lm * (len(RAMP) - 1)).astype(int)]
+    # 색은 원본 색상을 유지하고 밝기만 다시 매긴다
+    base = img[rr, cc] / np.maximum(lum[rr, cc], 1e-3)[:, None]
+    col = np.clip(base * (0.25 + 0.95 * Lm)[:, None], 0, 1.6) * alpha
+    g._write(rr, cc, ch, col.astype(np.float32))
+    return len(rr)
+
+
 # ---------- 배경 도우미 ----------
 class LetterRain:
     """화면 전체에 흐리게 깔리는 글자. 열마다 다른 속도로 천천히 내려온다."""

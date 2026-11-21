@@ -1,7 +1,8 @@
 # CLAUDE.md - ascii_reels
 
 글자(아스키)로 무언가가 점점 완성되는 15초 이내 세로 릴스를 만드는 저장소.
-구조와 주제 스크립트 규약은 `README.md`, 새 영상을 만드는 절차는 `.claude/skills/new-reel/SKILL.md`.
+구조와 주제 스크립트 규약은 `README.md`, 기획 기준과 연출 패턴은 `storyboards/GUIDE.md`,
+새 영상을 만드는 절차는 `.claude/skills/new-reel/SKILL.md`.
 
 ## 지침
 
