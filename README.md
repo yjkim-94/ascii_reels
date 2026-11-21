@@ -7,7 +7,7 @@
 
 ```bash
 pip install numpy pillow pygments     # pygments는 코드 색칠용(없으면 단색)
-python render.py themes/christmas_tree.py                 # out/christmas_tree.mp4 (20초, 약 1분)
+python render.py themes/christmas_tree.py                 # out/christmas_tree.mp4 (15초, 약 45초 걸림)
 python render.py themes/christmas_tree.py --still 3 9 15  # 해당 초 PNG만 (검수용, 1~2초)
 python render.py themes/christmas_tree.py --seconds 5     # 앞부분만
 ```
@@ -23,7 +23,7 @@ ffmpeg(libx264)와 DejaVu 글꼴(`/usr/share/fonts/truetype/dejavu/`)이 필요�
 
 ## 주제 스크립트 규약 (LLM 자동 생성 시 이것만 지키게 한다)
 
-1. 모듈 상수: `DURATION`(초, 기본 20), 선택 `GLOW`(빛 번짐 세기, 0.9 안팎).
+1. 모듈 상수: `DURATION`(초, **최대 15**, 넘으면 엔진이 거부), 선택 `GLOW`(빛 번짐 세기, 0.9 안팎).
 2. `draw(g, t)`를 구현한다. **t만으로 결정**되어야 한다(전역 상태 변경 금지, 난수는 모듈 로드 때 고정 시드로 미리 뽑기).
 3. 반환: `{"hud": [줄, ...], "caption": (전체문구, 보일글자수, y, rgb, 크기, 자간, 커서여부)}` 또는 HUD 줄 목록만.
 4. 그리기 API
@@ -34,7 +34,7 @@ ffmpeg(libx264)와 DejaVu 글꼴(`/usr/share/fonts/truetype/dejavu/`)이 필요�
    - 색은 RGB 0~1. 1을 넘기면 더 밝게 번진다(전구, 별 등 강조).
 5. 시간 도우미: `ramp(t, a, b)`, `ease`(빠르게 시작), `smooth`(고르게), `pop`(튀어나옴).
 6. 플롯: `T_*` 구간 상수로 "바탕 → 형체가 자람 → 장식이 하나씩 → 마지막 한 방(별/꽃/문구) → 페이드아웃"을
-   0~20초에 배치. 끝은 처음 화면(배경만)과 같게 해서 반복 재생이 이어지게 한다.
+   0~15초에 배치. 끝은 처음 화면(배경만)과 같게 해서 반복 재생이 이어지게 한다.
 7. 화면에 나오는 파일이므로 **주석은 영어**(코드 글꼴에 한글이 없다), 한 줄 70자 안쪽, 읽히는 이름을 쓴다.
 8. 쓸 수 있는 글자는 `engine.CHARS`(공백, `.,:;*+'`|-/\_~=#@%&o0O`, 대문자, 숫자)뿐이다.
 

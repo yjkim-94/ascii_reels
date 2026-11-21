@@ -18,6 +18,7 @@ COLS, ROWS = W // CW, 61             # 108 x 61 칸
 TOP_H = ROWS * CH                    # 위쪽 렌더 영역 높이 1098px
 BAR_H = 62                           # 코드 패널 머리줄
 CODE_Y = TOP_H + BAR_H
+MAX_DURATION = 15.0                  # 모든 영상은 15초 이내
 
 FONT_DIR = "/usr/share/fonts/truetype/dejavu/"
 MONO = FONT_DIR + "DejaVuSansMono.ttf"
@@ -323,7 +324,9 @@ class Renderer:
     def __init__(self, theme_path, fps=30):
         self.theme, src, name = load_theme(theme_path)
         self.fps = fps
-        self.duration = float(getattr(self.theme, "DURATION", 20.0))
+        self.duration = float(getattr(self.theme, "DURATION", MAX_DURATION))
+        if self.duration > MAX_DURATION:
+            raise ValueError(f"DURATION {self.duration}s > {MAX_DURATION}s 제한")
         self.panel = CodePanel(src, name, fps)
         self.grid = Grid()
 
@@ -348,7 +351,7 @@ class Renderer:
         Image.fromarray(self.frame(t)).save(path)
 
     def video(self, out_path, seconds=None, progress=True):
-        seconds = seconds or self.duration
+        seconds = min(seconds or self.duration, self.duration)
         n = int(round(seconds * self.fps))
         cmd = [
             "ffmpeg", "-y", "-loglevel", "error",

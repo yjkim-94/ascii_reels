@@ -6,20 +6,20 @@ from engine import (CIDX, LetterRain, Snow, ease, idx,
 HANDLE = "@ascii.reels"
 WORD = "MERRYCHRISTMASJOYPEACE"
 GREETING = "MERRY CHRISTMAS 2026"
-DURATION = 20.0
+DURATION = 15.0
 GLOW = 0.95
 rng = np.random.default_rng(7)
 
 # ---------- timeline (seconds) ----------
-T_GROUND = (0.0, 1.0)     # ground fades in
-T_TRUNK = (0.6, 1.4)      # trunk rises
-T_TREE = (1.2, 6.2)       # tree grows bottom -> top
-T_LIGHTS = (6.0, 10.0)    # garland wraps upward
-T_ORN = (6.6, 10.4)       # ornaments pop in
-T_STAR = (10.2, 11.2)     # star + rays
-T_GIFT = (10.6, 12.6)     # gift boxes pop in
-T_TEXT = (12.6, 15.6)     # greeting types out
-T_FADE = (17.8, 19.4)     # fade out, then loop
+T_GROUND = (0.0, 0.8)     # ground fades in
+T_TRUNK = (0.4, 1.0)      # trunk rises
+T_TREE = (0.9, 4.6)       # tree grows bottom -> top
+T_LIGHTS = (4.5, 7.5)     # garland wraps upward
+T_ORN = (4.9, 7.8)        # ornaments pop in
+T_STAR = (7.6, 8.4)       # star + rays
+T_GIFT = (8.0, 9.6)       # gift boxes pop in
+T_TEXT = (9.4, 11.6)      # greeting types out
+T_FADE = (13.2, 14.6)     # fade out, then loop
 SPIN = 0.55               # rad / s
 
 # ---------- layout (Y: 0 top .. 1 bottom) ----------
@@ -173,8 +173,8 @@ def draw(g, t):
 
     # 8) gift boxes rise from the ground
     for j, (cx, wd, ht, box, rib) in enumerate(GIFTS):
-        gt0 = T_GIFT[0] + j * 0.45
-        k = pop(np.clip((t - gt0) / 0.6, 0, 1))
+        gt0 = T_GIFT[0] + j * 0.33
+        k = pop(np.clip((t - gt0) / 0.5, 0, 1))
         rows = int(round(ht * np.clip(k, 0, 1.2)))
         if rows <= 0:
             continue
