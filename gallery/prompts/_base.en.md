@@ -22,7 +22,7 @@ You are going to make a short vertical ASCII-art reel with a single Python scrip
 - Background layers: faint twinkling stars or a dim letter rain, so the screen is never dead.
 
 ## Story rules
-- Something moves in the first second (the hook). The full form is revealed at 55-70 % of the length. One climax, clearly stronger than everything before it. The last 1.5 s fades back to the opening frame so the reel loops seamlessly.
+- Something moves in the first second (the hook). The full form is revealed at 55-70 % of the length. One climax that answers the question the reel raises; it stands out by contrast with what came before (size, speed, colour, stillness), not necessarily by being the brightest moment, and its elements are hinted at earlier. The last 1.5 s fades back to the opening frame so the reel loops seamlessly.
 - Put all scene times as `T_*` constants at the top of the script: that block reads as a timeline in the code panel.
 - Comments in English, lines of at most 68 characters (about 69 fit in the code panel).
 
@@ -45,5 +45,5 @@ You are going to make a short vertical ASCII-art reel with a single Python scrip
 
 ## How to work
 1. First show me the storyboard below as a table (scenes, times, motion, colours, climax) and wait for my OK or changes.
-2. Write the script. Render still frames at the middle of every scene and look at them yourself: check that nothing important is cut off or hidden under the status block, the climax is the strongest moment (judge brightness over its whole duration; a flash of 1-2 frames may peak higher), and the loop seam is clean. If the storyboard says something is intended (e.g. dust running past the edge for a moment), keep it. Fix and repeat.
+2. Write the script. Render still frames at the middle of every scene and look at them yourself: check that nothing important is cut off or hidden under the status block, the climax reads clearly against the scenes before it (by contrast, as the storyboard describes; a flash of 1-2 frames elsewhere may be brighter), and the loop seam is clean. If the storyboard says something is intended (e.g. dust running past the edge for a moment), keep it. Fix and repeat.
 3. Render the full mp4 and tell me the file path and how long it took.
