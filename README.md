@@ -19,6 +19,7 @@ ffmpeg(libx264)와 DejaVu 글꼴(`/usr/share/fonts/truetype/dejavu/`)이 필요�
 - `engine.py`: 글자 아틀라스, `Grid`(108x61 칸), 배경(`LetterRain`, `Snow`), 빛 번짐, 큰 글씨 자막,
   HUD, 코드 패널, mp4 인코딩. 주제와 무관한 것은 모두 여기.
 - `themes/*.py`: 주제 하나 = 파일 하나. 이 파일이 그대로 영상 하단에 나온다.
+  `christmas_tree.py`(2D 마스크 방식, 15초), `jellyfish_sample.py`(3D 점 구름 방식, 3초 렌더 시안).
 - `render.py`: 명령줄 진입점.
 
 ## 주제 스크립트 규약 (LLM 자동 생성 시 이것만 지키게 한다)
@@ -32,6 +33,9 @@ ffmpeg(libx264)와 DejaVu 글꼴(`/usr/share/fonts/truetype/dejavu/`)이 필요�
    - `g.put_cells(rows, cols, chars, colors)`: 점 찍기. `g.to_cell(x, y)`로 좌표 변환.
    - `g.text(row, col, "문자열", color)`.
    - 색은 RGB 0~1. 1을 넘기면 더 밝게 번진다(전구, 별 등 강조).
+   - 3D: 점 (N,3)을 `rot_y`/`rot_x`로 돌리고 `splat(g, P, rgb, lum, chars)`로 찍는다.
+     원근 투영, 칸마다 가장 앞 점만 남기기(z-buffer), 밝기 -> 잉크 면적 순 글자(`RAMP`)를 엔진이 한다.
+     선(촉수, 빛줄기)은 `dir_chars(dx, dy)`로 `| / \ -` 글자를 쓴다.
 5. 시간 도우미: `ramp(t, a, b)`, `ease`(빠르게 시작), `smooth`(고르게), `pop`(튀어나옴).
 6. 플롯: `T_*` 구간 상수로 "바탕 → 형체가 자람 → 장식이 하나씩 → 마지막 한 방(별/꽃/문구) → 페이드아웃"을
    0~15초에 배치. 끝은 처음 화면(배경만)과 같게 해서 반복 재생이 이어지게 한다.

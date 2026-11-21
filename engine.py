@@ -25,7 +25,8 @@ MONO = FONT_DIR + "DejaVuSansMono.ttf"
 MONO_BOLD = FONT_DIR + "DejaVuSansMono-Bold.ttf"
 
 # ---------- glyph atlas ----------
-CHARS = list(" .,:;*+'`|-/\\_~=#@%&o0O" + "ABCDEFGHIJKLMNOPQRSTUVWXYZ" + "0123456789")
+CHARS = list(" .,:;*+'`|-/\\_~=#@%&o0O" + "ABCDEFGHIJKLMNOPQRSTUVWXYZ" + "0123456789"
+             + "abcdefghijklmnopqrstuvwxyz" + "$!?<>{}[]()^\"")
 CHARS = list(dict.fromkeys(CHARS))   # 중복 제거, 순서 유지
 CIDX = {c: i for i, c in enumerate(CHARS)}
 
@@ -41,6 +42,17 @@ def _build_atlas():
 
 
 ATLAS = _build_atlas()
+
+
+def _build_ramp(n=28):
+    """잉크 면적(글자가 칸을 채우는 비율) 순으로 고른 밝기 계단. 0번은 가장 옅은 '.'."""
+    cover = ATLAS.mean(axis=(1, 2))
+    order = [i for i in np.argsort(cover) if CHARS[i] != " " and CHARS[i] != "_"]
+    pick = np.linspace(0, len(order) - 1, n).round().astype(int)
+    return np.array([order[i] for i in pick], np.int32)
+
+
+RAMP = _build_ramp()
 
 
 def idx(s):
@@ -112,6 +124,57 @@ class Grid:
         cc = np.floor((np.asarray(x) * (W / 2) + W / 2) / CW).astype(int)
         rr = np.floor(np.asarray(y) * TOP_H / CH).astype(int)
         return rr, cc
+
+
+# ---------- 3D 점 구름 ----------
+def rot_y(P, a):
+    """세로축 회전. P: (N, 3) = (x 오른쪽, y 아래, z 화면 앞쪽)."""
+    c, s = np.cos(a), np.sin(a)
+    x, y, z = P[:, 0], P[:, 1], P[:, 2]
+    return np.stack([c * x + s * z, y, -s * x + c * z], -1)
+
+
+def rot_x(P, a):
+    """가로축 회전(앞으로 숙이기)."""
+    c, s = np.cos(a), np.sin(a)
+    x, y, z = P[:, 0], P[:, 1], P[:, 2]
+    return np.stack([x, c * y - s * z, s * y + c * z], -1)
+
+
+def dir_chars(dx, dy):
+    """화면에서 선이 뻗는 방향 -> | / \\ - 글자. 촉수, 빛줄기 같은 선에 쓴다."""
+    a = np.degrees(np.arctan2(dy, dx)) % 180
+    return np.select([(a < 22.5) | (a >= 157.5), a < 67.5, a < 112.5],
+                     [CIDX["-"], CIDX["\\"], CIDX["|"]], CIDX["/"])
+
+
+def splat(g, P, rgb, lum, chars=None, cy=0.5, scale=1.0, f=3.2):
+    """3D 점 -> 원근 투영 -> 칸마다 가장 앞 점 하나(z-buffer) -> 밝기로 글자 선택.
+
+    P: (N, 3), rgb: (N, 3), lum: (N,) 0~1.
+    chars: (N,) 글자 번호, -1이면 밝기 계단 사용. 반환값은 실제로 찍힌 칸 수.
+    """
+    x, y, z = P[:, 0], P[:, 1], P[:, 2]
+    k = f / np.maximum(f - z, 0.2) * scale
+    # x는 화면 폭 절반 = 1, y도 같은 픽셀 길이가 되게 맞춘다
+    rr, cc = g.to_cell(x * k, cy + y * k * (W / 2) / TOP_H)
+    ok = (rr >= 0) & (rr < ROWS) & (cc >= 0) & (cc < COLS) & (lum > 0.02)
+    if not np.any(ok):
+        return 0
+    ids = np.nonzero(ok)[0]
+    key = rr[ids] * COLS + cc[ids]
+    order = np.lexsort((-z[ids], key))           # 칸별로 가장 앞(z 큰) 점이 먼저
+    key = key[order]
+    first = np.r_[True, key[1:] != key[:-1]]
+    sel = ids[order[first]]
+    L = np.clip(lum[sel], 0, 1)
+    ch = RAMP[(L * (len(RAMP) - 1)).astype(int)]
+    if chars is not None:
+        own = np.asarray(chars)[sel]
+        ch = np.where(own >= 0, own, ch)
+    g.ch[rr[sel], cc[sel]] = ch
+    g.col[rr[sel], cc[sel]] = rgb[sel] * (0.35 + 0.9 * L)[:, None]
+    return len(sel)
 
 
 # ---------- 배경 도우미 ----------
@@ -257,6 +320,7 @@ class CodePanel:
     def draw(self, frame, t, duration):
         # 영상 길이의 92% 동안 파일 끝까지 부드럽게 내려간다
         span = max(self.n - self.visible + 4, 0)
+        span = min(span, duration * 6.0)        # 초당 6줄을 넘지 않게
         s = span * ease(min(t / (duration * 0.92), 1.0) ** 1.15)
         y0 = int(s * LINE_H)
         h = H - CODE_Y
