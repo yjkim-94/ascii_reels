@@ -5,7 +5,7 @@ from engine import (CIDX, dir_chars, ease, noise2d, pic_coords, pop,
 
 TITLE = "Forest Goddess"
 HANDLE = "@justmade.lab"
-DURATION = 20.0
+DURATION = 18.5
 GLOW = 1.0
 rng = np.random.default_rng(51)
 
@@ -15,16 +15,17 @@ T_REVEAL = (0.0, 3.5)     # the dusk forest and the dead tree appear
 T_WALK = (1.6, 9.5)       # she walks to the tree
 T_REACH = (9.8, 10.6)     # she reaches out and touches the bark
 T_TOUCH = 10.6            # stage 1: green light runs up the tree
-T_ARMS = (12.0, 12.6)     # she steps back and spreads her arms
-T_RING = (12.6, 15.0)     # stage 2: a green ring runs over the land
-T_DOWN = (15.5, 16.5)     # her arms come down
-T_FADE = (18.5, 20.0)     # dusk falls back to dark, then loop
+T_LOOK = (12.0, 13.2)     # she lowers her hand and looks up at it
+T_BEND = (13.2, 13.7)     # arms rise, elbows bent, gathering power
+T_ARMS = (13.7, 14.2)     # she steps back and flings them wide
+T_RING = (14.2, 16.6)     # stage 2: a green ring runs over the land
+T_FADE = (17.0, 18.5)     # dusk falls back to dark, then loop
 SCENES = [("first footprint", 0.0, 1.2), ("reveal", 1.0, 3.5),
           ("walk", 3.5, 9.5), ("reach", 9.5, 10.6),
-          ("tree wakes", 10.6, 12.0), ("arms open", *T_ARMS),
-          ("forest wakes", *T_RING), ("afterglow", 15.0, 18.5),
+          ("tree wakes", 10.6, 12.0), ("look up", *T_LOOK),
+          ("gather + open", 13.2, 14.2), ("forest wakes", *T_RING),
           ("fade", *T_FADE)]
-POSTER_T = 15.6
+POSTER_T = 16.4
 
 # ---------- layout (screen: X -1..1, Y 0 top .. 1 bottom) ----------
 GROUND = 0.78
@@ -172,13 +173,13 @@ FY_PH = rng.uniform(0, 2 * np.pi, N_FLY)
 
 def camera(t):
     f1 = walk_x(STEPS[0])
-    xe = walk_x(13.0)
+    xe = walk_x(14.5)
     keys = [(0.0, 1.38, f1, 0.74), (1.0, 1.3, f1, 0.74),
             (3.5, 1.0, 0.0, 0.55), (9.5, 1.04, 0.1, 0.6),
             (10.6, 1.18, TOUCH[0], TOUCH[1]),
-            (12.0, 1.0, 0.3, 0.5), (12.6, 1.08, xe, 0.62),
-            (15.0, 1.0, 0.0, 0.5), (18.5, 1.0, 0.0, 0.5),
-            (20.0, 1.38, f1, 0.74)]
+            (12.0, 1.0, 0.3, 0.5), (13.2, 1.04, xe, 0.55),
+            (14.2, 1.1, xe, 0.60), (16.6, 1.0, 0.0, 0.5),
+            (17.0, 1.0, 0.0, 0.5), (18.5, 1.38, f1, 0.74)]
     i = max(j for j in range(len(keys)) if keys[j][0] <= t)
     k0, k1 = keys[i], keys[min(i + 1, len(keys) - 1)]
     u = smooth(ramp(t, k0[0], k1[0])) if k1[0] > k0[0] else 0.0
@@ -188,7 +189,7 @@ def camera(t):
 
 def ring_reach(x):
     """time the green ring reaches screen X."""
-    return T_RING[0] + np.abs(np.asarray(x) - walk_x(13.0)) / RING_SPEED
+    return T_RING[0] + np.abs(np.asarray(x) - walk_x(14.5)) / RING_SPEED
 
 
 def draw_tree(g, pts, base_y, col0, lum0, light=None, wake=0.0,
@@ -258,6 +259,7 @@ def goddess(t, a_g, sp):
     face = (v > 0.83) & (v < 0.97) & (u > hx) & (u < hx + np.interp(
         v, [0.83, 0.85, 0.875, 0.895, 0.915, 0.94, 0.97],
         [0.048, 0.058, 0.066, 0.078, 0.071, 0.069, 0.055]))
+    head = head | face
     inner = body & (np.abs(u) < half - 0.03)
     edge = body & ~inner
     fold = np.cos(u / np.maximum(half, 1e-3) * np.pi * 2.5
@@ -280,8 +282,17 @@ def goddess(t, a_g, sp):
     fch = np.where(fold > 0.55, "|", np.where(fold > -0.2, "#", "%"))
     put(inner, list(fch[inner]), dcol[inner])
     put(edge, list(np.where(u[edge] > 0, ")", "(")), MINT * 1.1 * a_g)
-    put(head & ~face, "@", SKIN * 0.75 * a_g)
-    put(face, ")", SKIN * 1.1 * a_g)
+    put(head, "@", SKIN * 0.7 * a_g)
+    pv = np.linspace(0.835, 0.965, 9)          # one profile line
+    pu = hx + np.interp(pv, [0.83, 0.85, 0.875, 0.895, 0.915, 0.94,
+                             0.97],
+                        [0.048, 0.058, 0.066, 0.078, 0.071, 0.069,
+                         0.055])
+    sp["x"].extend(xg + (pu - lean * pv) * FIG_PX / 540)
+    sp["y"].extend(GROUND - bob - pv * FIG_PX / 1098)
+    sp["ch"].extend([")"] * 9)
+    sp["size"].extend([12] * 9)
+    sp["rgb"].extend(np.broadcast_to(SKIN * 1.1 * a_g, (9, 3)))
 
     def at(fu, fv):
         return (xg + (fu + lean * fv) * FIG_PX / 540,
@@ -296,31 +307,55 @@ def goddess(t, a_g, sp):
         sp["rgb"].extend(col)
 
     reach = smooth(ramp(t, *T_REACH)) * (1 - smooth(ramp(t, 11.6,
-                                                         12.0)))
-    spread = smooth(ramp(t, *T_ARMS)) * (1 - smooth(ramp(t, *T_DOWN)))
-    s16 = np.linspace(0, 1, 18)
+                                                         12.4)))
+    bend = smooth(ramp(t, *T_BEND))
+    fling = smooth(ramp(t, *T_ARMS))
+    s9 = np.linspace(0, 1, 10)
     for side in (1, -1):                       # front, back arm
         sx, sy = at(0.07 * side, 0.76)
-        # hands clasped softly in front of the waist while walking
-        hx_, hy_ = at(0.10 + 0.012 * side, 0.50 + 0.008 * side)
-        if side == 1:                          # the front arm reaches
-            hx_ += (TOUCH[0] - hx_) * reach
-            hy_ += (TOUCH[1] - hy_) * reach
-        ox, oy = at(side * 0.42, 1.02)         # both arms spread wide
-        hx_ += (ox - hx_) * spread
-        hy_ += (oy - hy_) * spread
+        # pose = (elbow, hand) in height fractions
+        ex, ey = 0.06 * side + 0.03, 0.60      # hands clasped in front
+        hx_, hy_ = 0.10 + 0.012 * side, 0.50 + 0.008 * side
+        bx, by = side * 0.20, 0.70             # bent: gathering power
+        bhx, bhy = side * 0.12, 0.92
+        fx, fy = side * 0.25, 0.90             # flung wide
+        fhx, fhy = side * 0.46, 1.04
+        ex += (bx - ex) * bend
+        ey += (by - ey) * bend
+        hx_ += (bhx - hx_) * bend
+        hy_ += (bhy - hy_) * bend
+        ex += (fx - ex) * fling
+        ey += (fy - ey) * fling
+        hx_ += (fhx - hx_) * fling
+        hy_ += (fhy - hy_) * fling
+        EX, EY = at(ex, ey)
+        HX, HY = at(hx_, hy_)
+        if side == 1 and reach > 0:            # the front arm reaches
+            HX += (TOUCH[0] - HX) * reach
+            HY += (TOUCH[1] - HY) * reach
+            EX += ((sx + TOUCH[0]) / 2 - EX) * reach
+            EY += ((sy + TOUCH[1]) / 2 + 0.02 - EY) * reach
         col = SKIN * (1.0 if side == 1 else 0.7) * a_g
-        ax, ay = hx_ - sx, (hy_ - sy) * ASPECT
-        nl = max(np.hypot(ax, ay), 1e-6)
-        nx, ny = -ay / nl, ax / nl             # across the arm
-        for k, off in enumerate((-1.5, -0.5, 0.5, 1.5)):
-            w = 0.006 * (1 + 0.8 * (1 - s16))  # wider sleeve at top
-            xs = sx + ax * s16 + nx * off * w
-            ys = sy + (hy_ - sy) * s16 + ny * off * w / ASPECT
-            c = np.where((s16 < 0.55)[:, None], DRESS * 1.6 * a_g, col)
-            strand(xs, ys, c)
-        sp["x"].append(hx_)
-        sp["y"].append(hy_)
+        for (x0, y0, x1, y1, sleeve) in ((sx, sy, EX, EY, True),
+                                         (EX, EY, HX, HY, False)):
+            ax, ay = x1 - x0, (y1 - y0) * ASPECT
+            nl = max(np.hypot(ax, ay), 1e-6)
+            nx, ny = -ay / nl, ax / nl         # across the arm
+            for off in (-1.5, -0.5, 0.5, 1.5):
+                w = 0.008 if sleeve else 0.005
+                xs = x0 + ax * s9 + nx * off * w
+                ys = y0 + (y1 - y0) * s9 + ny * off * w / ASPECT
+                c = DRESS * 1.6 * a_g if sleeve else col
+                strand(xs, ys, np.broadcast_to(c, (10, 3)))
+        # power gathering between the bent hands
+        if 0 < bend and fling < 1:
+            sp["x"].append(HX)
+            sp["y"].append(HY - 0.01)
+            sp["ch"].append("*")
+            sp["size"].append(16)
+            sp["rgb"].append(MINT * 1.6 * bend * (1 - fling) * a_g)
+        sp["x"].append(HX)
+        sp["y"].append(HY)
         sp["ch"].append("o")
         sp["size"].append(13)
         sp["rgb"].append(col)
@@ -331,7 +366,7 @@ def goddess(t, a_g, sp):
         turn = 2 * np.pi * (2.5 + HA_L[j]) * s + HA_PH[j]
         curl = 0.028 * s ** 0.8
         wave = 0.03 * np.sin(2.3 * t - 5 * s + HA_PH[j]) * s ** 1.5
-        trail = (0.04 + 0.05 * moving + 0.06 * spread) * s ** 2
+        trail = (0.04 + 0.05 * moving + 0.06 * fling) * s ** 2
         hu = HA_O[j] - 0.04 - 0.08 * s * HA_L[j] - trail + wave \
             + curl * np.sin(turn)
         hv = 0.97 - s * (0.40 + 0.08 * HA_L[j]) \
@@ -349,7 +384,7 @@ def draw(g, t):
     w1 = smooth(ramp(t, T_TOUCH, 12.0))         # stage 1
     rad = (t - T_RING[0]) * RING_SPEED          # stage 2 ring radius
     w2 = smooth(ramp(t, *T_RING))
-    xe = walk_x(13.0)
+    xe = walk_x(14.5)
 
     # ================= picture layer =================
     under = SKY * (0.15 + 0.85 * rv)
@@ -358,7 +393,7 @@ def draw(g, t):
     under += ((PY > 0.6) & (PY < GROUND))[..., None] \
         * (mist * 0.08 * rv)[..., None] * np.array([0.5, 0.45, 0.5])
     under[RIDGE] = under[RIDGE] * 0.35
-    warm = (0.6 * w1 + 0.6 * w2) * (1 - 0.3 * ramp(t, 15.0, 18.5))
+    warm = 0.6 * w1 + 0.6 * w2
     glow = np.exp(-np.hypot(PX - TREE_X, (PY - 0.45) * ASPECT) / 0.6)
     under += (glow * 0.3 * warm * fade)[..., None] \
         * np.array([1.0, 0.85, 0.40])
@@ -456,8 +491,8 @@ def draw(g, t):
     a_g = smooth(ramp(t, 0.6, 2.4)) * fade
     sp = dict(x=[], y=[], ch=[], size=[], rgb=[])
     xg = goddess(t, a_g, sp)
-    aura = 0.22 + 0.5 * smooth(ramp(t, *T_ARMS)) \
-        * (1 - smooth(ramp(t, 15.0, 17.0)))
+    aura = 0.22 + 0.3 * smooth(ramp(t, *T_BEND)) \
+        + 0.4 * smooth(ramp(t, *T_ARMS))
     under += (aura * a_g * np.exp(-np.hypot(
         PX - xg, (PY - (GROUND - 0.2)) * ASPECT) / 0.2))[..., None] \
         * EMERALD
@@ -465,11 +500,11 @@ def draw(g, t):
         under += (0.6 * np.exp(-np.hypot(PX - TOUCH[0], (
             PY - TOUCH[1]) * ASPECT) / 0.05) * fade)[..., None] * MINT
 
-    # ================= afterglow: fireflies =================
-    kf = smooth(ramp(t, 13.5, 15.0)) * fade
+    # ================= fireflies over the woken forest ==========
+    kf = smooth(ramp(t, 15.0, 16.5)) * fade
     if kf > 0:
         x = FY_X + 0.03 * np.sin(0.8 * t + FY_PH)
-        y = FY_Y - 0.02 * (t - 13.5) - 0.01 * np.sin(1.3 * t + FY_PH)
+        y = FY_Y - 0.02 * (t - 15.0) - 0.01 * np.sin(1.3 * t + FY_PH)
         fl = kf * (0.5 + 0.5 * np.clip(np.sin(3 * t + FY_PH), 0, 1))
         rr, cc = g.to_cell(x, y)
         g.put_cells(rr, cc, np.where(np.arange(N_FLY) % 4, CIDX["."],
