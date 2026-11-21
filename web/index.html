@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ascii reels</title>
+  <meta name="description" content="Copy a prompt, paste it into Claude Code, get the ASCII reel. by @justmade.lab">
+  <meta property="og:title" content="ascii reels">
+  <meta property="og:description" content="One prompt. Copy it into Claude Code and get the reel.">
+  <meta property="og:image" content="/posters/saturn.jpg">
+  <meta name="theme-color" content="#0b0c10">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="bg" aria-hidden="true" id="bg"></div>
+
+  <header class="top">
+    <a class="brand" href="/">ascii reels<span class="cursor"></span></a>
+    <div class="lang" role="group" aria-label="language">
+      <button type="button" data-lang="ko">KO</button>
+      <button type="button" data-lang="en">EN</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <p class="status"><span class="dot"></span><span data-i18n="status"></span></p>
+      <h1>ascii reels</h1>
+      <p class="lead" data-i18n="lead"></p>
+      <p class="sub" data-i18n="sub"></p>
+    </section>
+
+    <section class="gallery" id="gallery" aria-label="gallery"></section>
+
+    <section class="make" id="make">
+      <h2 data-i18n="make_title"></h2>
+      <ol class="steps">
+        <li>
+          <span class="num">01</span>
+          <div>
+            <h3 data-i18n="s1_title"></h3>
+            <p data-i18n-html="s1_body"></p>
+          </div>
+        </li>
+        <li>
+          <span class="num">02</span>
+          <div>
+            <h3 data-i18n="s2_title"></h3>
+            <p data-i18n-html="s2_body"></p>
+            <pre class="cmd"><code>mkdir my-reel &amp;&amp; cd my-reel
+claude</code></pre>
+          </div>
+        </li>
+        <li>
+          <span class="num">03</span>
+          <div>
+            <h3 data-i18n="s3_title"></h3>
+            <p data-i18n="s3_body"></p>
+          </div>
+        </li>
+      </ol>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <span>&copy; 2026 @justmade.lab</span>
+    <span class="dim" data-i18n="foot"></span>
+  </footer>
+
+  <template id="card-tpl">
+    <article class="card">
+      <div class="shot"><img alt="" loading="lazy" width="540" height="960"></div>
+      <div class="meta">
+        <h3 class="title"></h3>
+        <p class="desc"></p>
+        <div class="actions">
+          <button type="button" class="copy"></button>
+          <button type="button" class="view" aria-expanded="false"></button>
+        </div>
+        <pre class="prompt" hidden></pre>
+      </div>
+    </article>
+  </template>
+
+  <script src="/app.js" defer></script>
+</body>
+</html>

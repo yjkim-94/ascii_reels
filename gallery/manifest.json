@@ -8,7 +8,8 @@
     "theme": "themes/christmas_tree.py",
     "storyboard": "storyboards/christmas_tree.md",
     "size_mb": 15.6,
-    "updated": "2026-11-21"
+    "updated": "2026-11-21",
+    "poster_web": "posters/christmas_tree_web.jpg"
   },
   {
     "slug": "saturn",
@@ -19,6 +20,7 @@
     "theme": "themes/saturn.py",
     "storyboard": "storyboards/saturn.md",
     "size_mb": 11.6,
-    "updated": "2026-11-21"
+    "updated": "2026-11-21",
+    "poster_web": "posters/saturn_web.jpg"
   }
 ]

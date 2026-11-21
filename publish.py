@@ -30,7 +30,11 @@ def main(theme_path):
     poster = gal / "posters" / f"{slug}.jpg"
     r.video(video)
     poster_t = float(getattr(th, "POSTER_T", r.duration * 0.8))
-    Image.fromarray(r.frame(poster_t)).save(poster, quality=88)
+    still = Image.fromarray(r.frame(poster_t))
+    still.save(poster, quality=88)
+    # 웹 갤러리용 작은 썸네일(540x960)
+    web = gal / "posters" / f"{slug}_web.jpg"
+    still.resize((540, 960), Image.LANCZOS).save(web, quality=84)
 
     mpath = gal / "manifest.json"
     items = json.loads(mpath.read_text()) if mpath.exists() else []
@@ -42,6 +46,7 @@ def main(theme_path):
         "duration": r.duration,
         "video": f"videos/{slug}.mp4",
         "poster": f"posters/{slug}.jpg",
+        "poster_web": f"posters/{slug}_web.jpg",
         "theme": f"themes/{theme_path.name}",
         "storyboard": f"storyboards/{slug}.md" if sb.exists() else None,
         "size_mb": round(video.stat().st_size / 1e6, 1),

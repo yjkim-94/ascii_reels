@@ -1,0 +1,208 @@
+/* 영상과 같은 터미널 톤. 색은 영상의 코드 패널, 커서, running 점에서 가져왔다. */
+:root {
+  --bg: #0b0c10;
+  --panel: #16181d;
+  --panel-2: #1e2027;
+  --line: #2a2d35;
+  --text: #e6e8ec;
+  --dim: #8a909c;
+  --pink: #ff6b9e;
+  --green: #3fb950;
+  --amber: #f2b45c;
+  --radius: 10px;
+  --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --sans-en: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --sans-ko: "Pretendard Variable", Pretendard, system-ui, -apple-system, sans-serif;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 16px/1.6 var(--sans-en);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+html:lang(ko) body { font-family: var(--sans-ko); word-break: keep-all; }
+
+a { color: inherit; }
+code, pre, .brand, h1, .num, .status, .lang button { font-family: var(--mono); }
+
+/* ---------- 배경: 시안 글자 그림이 흐리게 떠다닌다 ---------- */
+.bg {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+.bg pre {
+  position: absolute;
+  margin: 0;
+  font: 9px/1.05 var(--mono);
+  white-space: pre;
+  opacity: 0.09;
+  animation: drift 26s ease-in-out infinite alternate;
+}
+@keyframes drift {
+  from { transform: translate3d(0, 0, 0) rotate(var(--r, 0deg)); }
+  to { transform: translate3d(var(--dx, 20px), var(--dy, -40px), 0) rotate(var(--r, 0deg)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bg pre { animation: none; }
+  .cursor { animation: none !important; }
+}
+
+/* ---------- 머리줄 ---------- */
+.top, main, .foot { position: relative; z-index: 1; }
+.top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 1160px;
+  margin: 0 auto;
+  padding: 20px 24px;
+}
+.brand { font-weight: 700; text-decoration: none; letter-spacing: 0.02em; }
+.cursor {
+  display: inline-block;
+  width: 0.55em;
+  height: 1.05em;
+  margin-left: 3px;
+  vertical-align: -0.15em;
+  background: var(--pink);
+  animation: blink 1s steps(1) infinite;
+}
+@keyframes blink { 50% { opacity: 0; } }
+.lang { display: flex; border: 1px solid var(--line); border-radius: 999px; padding: 3px; }
+.lang button {
+  border: 0;
+  background: none;
+  color: var(--dim);
+  font-size: 13px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.lang button[aria-pressed="true"] { background: var(--panel-2); color: var(--text); }
+
+/* ---------- 첫 화면 ---------- */
+main { max-width: 1160px; margin: 0 auto; padding: 0 24px; }
+.hero { padding: 56px 0 40px; }
+.status { color: var(--dim); font-size: 13px; margin: 0 0 18px; }
+.dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--green);
+  margin-right: 8px;
+  vertical-align: 1px;
+}
+h1 {
+  font-size: clamp(44px, 9vw, 88px);
+  line-height: 1;
+  margin: 0 0 20px;
+  letter-spacing: -0.02em;
+}
+.lead { font-size: clamp(22px, 3.4vw, 30px); font-weight: 600; margin: 0 0 8px; }
+.sub { color: var(--dim); font-size: 17px; margin: 0; max-width: 34em; }
+
+/* ---------- 갤러리 ---------- */
+.gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 24px;
+  padding-bottom: 72px;
+}
+.card {
+  background: color-mix(in srgb, var(--panel) 88%, transparent);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  backdrop-filter: blur(6px);
+}
+.shot { aspect-ratio: 9 / 16; background: #000; }
+.shot img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.meta { padding: 16px 16px 18px; }
+.title { margin: 0 0 4px; font-size: 18px; font-weight: 700; }
+.desc { margin: 0 0 14px; color: var(--dim); font-size: 14px; line-height: 1.5; }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.actions button {
+  font: 600 14px/1 var(--mono);
+  border-radius: 8px;
+  padding: 11px 14px;
+  cursor: pointer;
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  color: var(--text);
+}
+.actions .copy { background: var(--pink); border-color: var(--pink); color: #1a0710; flex: 1; }
+.actions .copy.done { background: var(--green); border-color: var(--green); color: #04140a; }
+.actions button:focus-visible, .lang button:focus-visible { outline: 2px solid var(--pink); outline-offset: 2px; }
+.prompt {
+  margin: 14px 0 0;
+  max-height: 320px;
+  overflow: auto;
+  padding: 12px;
+  background: #0f1014;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  color: #c9ced6;
+}
+
+/* ---------- 직접 만들기 ---------- */
+.make { padding: 24px 0 80px; border-top: 1px solid var(--line); }
+.make h2 { font-size: 28px; margin: 32px 0 24px; }
+.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 16px; }
+.steps li {
+  display: flex;
+  gap: 18px;
+  padding: 20px;
+  background: color-mix(in srgb, var(--panel) 88%, transparent);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+.num { color: var(--pink); font-weight: 700; font-size: 15px; padding-top: 2px; }
+.steps h3 { margin: 0 0 4px; font-size: 18px; }
+.steps p { margin: 0; color: var(--dim); }
+.steps a { color: var(--text); text-underline-offset: 3px; }
+.cmd {
+  margin: 12px 0 0;
+  padding: 12px 14px;
+  background: #0f1014;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 14px;
+  overflow-x: auto;
+}
+
+/* ---------- 바닥 ---------- */
+.foot {
+  max-width: 1160px;
+  margin: 0 auto;
+  padding: 24px;
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 13px;
+  font-family: var(--mono);
+  border-top: 1px solid var(--line);
+}
+.dim { color: var(--dim); }
+
+@media (max-width: 600px) {
+  .top { padding: 16px; }
+  main { padding: 0 16px; }
+  .hero { padding: 32px 0 28px; }
+  .gallery { gap: 18px; }
+  .steps li { padding: 16px; gap: 12px; }
+  .bg pre { font-size: 7px; }
+}

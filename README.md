@@ -25,6 +25,9 @@ ffmpeg(libx264)와 DejaVu 글꼴(`/usr/share/fonts/truetype/dejavu/`)이 필요�
 - `sources/`: 실사 변환용 원본 영상(`test_fractal.mp4`는 ffmpeg로 만든 시험용).
 - `render.py`: 영상/정지 화면. `check.py`: 자동 점검 + 점검 시트. `publish.py`: 갤러리 등록.
 - `gallery/`: 웹사이트가 읽을 영상, 썸네일, `manifest.json`.
+- `gallery/cards.json`(카드 제목·한 줄 설명, 표시 순서), `gallery/prompts/`(복사용 프롬프트: `_base.{ko,en}.md` 공통 + `<slug>.{ko,en}.md` 스토리보드).
+- `web/`: 갤러리 웹(정적). `node web/build.mjs`가 `dist/`를 만들고 Vercel이 그걸 배포한다(`vercel.json`).
+  배경 글자 그림은 `python web/make_bg.py`로 시안에서 뽑는다.
 
 ## 워크플로
 

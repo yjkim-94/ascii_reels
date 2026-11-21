@@ -67,4 +67,11 @@ python check.py themes/<slug>.py
 python publish.py themes/<slug>.py
 ```
 
-`gallery/manifest.json`에 항목이 생긴다. 스토리보드, 주제 스크립트, manifest를 커밋한다.
+`gallery/manifest.json`에 항목이 생긴다. 이어서 웹 갤러리용으로:
+
+- `gallery/cards.json`에 제목과 한 줄 설명(ko, en)을 넣는다(맨 앞에 넣으면 갤러리 맨 앞).
+- `gallery/prompts/<slug>.ko.md`, `<slug>.en.md`에 복사용 스토리보드를 쓴다(저장소 없이 단독으로 동작해야 하므로
+  오브젝트 크기, 색 값, 장면 시간을 숫자로). 계정 자리는 `@your.handle`.
+- `node web/build.mjs`로 빌드가 되는지 확인한다.
+
+스토리보드, 주제 스크립트, manifest, cards, prompts를 커밋하고 push하면 Vercel이 자동 배포한다.
