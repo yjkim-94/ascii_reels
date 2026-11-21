@@ -1,7 +1,7 @@
 """사용법:
-  python render.py themes/christmas_tree.py                  # out/christmas_tree.mp4
-  python render.py themes/christmas_tree.py --still 3 8 15   # 해당 초의 PNG만
-  python render.py themes/christmas_tree.py --seconds 5      # 앞 5초만 빠르게 확인
+  python render.py themes/saturn.py                  # out/saturn.mp4
+  python render.py themes/saturn.py --still 3 8 15   # 해당 초의 PNG만
+  python render.py themes/saturn.py --seconds 5      # 앞 5초만 빠르게 확인
 """
 import argparse
 import sys

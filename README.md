@@ -7,9 +7,9 @@
 
 ```bash
 pip install numpy pillow pygments     # pygments는 코드 색칠용(없으면 단색)
-python render.py themes/christmas_tree.py                 # out/christmas_tree.mp4 (15초, 약 45초 걸림)
-python render.py themes/christmas_tree.py --still 3 9 15  # 해당 초 PNG만 (검수용, 1~2초)
-python render.py themes/christmas_tree.py --seconds 5     # 앞부분만
+python render.py themes/saturn.py                 # out/saturn.mp4 (15초, 약 45초 걸림)
+python render.py themes/saturn.py --still 3 9 15  # 해당 초 PNG만 (검수용, 1~2초)
+python render.py themes/saturn.py --seconds 5     # 앞부분만
 ```
 
 ffmpeg(libx264)와 DejaVu 글꼴(`/usr/share/fonts/truetype/dejavu/`)이 필요하다.
@@ -19,11 +19,10 @@ ffmpeg(libx264)와 DejaVu 글꼴(`/usr/share/fonts/truetype/dejavu/`)이 필요�
 - `engine.py`: 글자 아틀라스, `Grid`(108x61 칸), 3D 점 구름(`splat`), 배경(`LetterRain`, `Snow`), 빛 번짐,
   큰 글씨 자막, HUD, 코드 패널, mp4 인코딩. 주제와 무관한 것은 모두 여기.
 - `themes/*.py`: 주제 하나 = 파일 하나. 이 파일이 그대로 영상 하단에 나온다.
-  `christmas_tree.py`(2D 마스크, 15초), `jellyfish_sample.py`(3D 점 구름, 3초 시안),
-  `crystal_sample.py`(조명·반짝임·바닥 반사, 3초 시안), `footage_sample.py`(실사 영상 글자화, 3초 시안),
-  `lake_sample.py`(그림 층·바닥 원근·크기가 다른 글자, 3초 시안).
+  지금은 `saturn.py`(3D 점 구름, 15초) 하나. 엔진 기능(2D 마스크, 조명, 반사, 실사 변환, 그림 층, 원근)은
+  모두 남아 있고 사용법은 아래 규약에 있다.
 - `storyboards/*.md`: 주제별 스토리보드. `_template.md`를 복사해 쓴다. `GUIDE.md`는 기획 기준, 인터뷰 4문항, 연출 패턴 목록.
-- `sources/`: 실사 변환용 원본 영상(`test_fractal.mp4`는 ffmpeg로 만든 시험용).
+- `sources/`: 실사 변환용 원본 영상(지금은 비어 있음).
 - `render.py`: 영상/정지 화면. `check.py`: 자동 점검 + 점검 시트. `publish.py`: 갤러리 등록.
 - `gallery/`: 웹사이트가 읽을 영상, 썸네일, `manifest.json`.
 - `gallery/cards.json`(카드 제목·한 줄 설명, 표시 순서), `gallery/prompts/`(복사용 프롬프트: `_base.{ko,en}.md` 공통 + `<slug>.{ko,en}.md` 스토리보드).

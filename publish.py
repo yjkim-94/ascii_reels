@@ -1,6 +1,6 @@
 """검수를 통과한 주제를 갤러리에 올린다(영상 + 썸네일 + 목록 갱신).
 
-  python publish.py themes/christmas_tree.py
+  python publish.py themes/saturn.py
 
 gallery/videos/<slug>.mp4, gallery/posters/<slug>.jpg, gallery/manifest.json.
 웹사이트 갤러리는 manifest.json만 읽으면 된다.

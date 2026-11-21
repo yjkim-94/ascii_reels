@@ -5,12 +5,5 @@
       "ko": "흩어진 먼지가 모여 행성이 되고, 고리가 퍼지며 역광으로 빛난다",
       "en": "Dust spirals into a planet, rings spread out and glow in back light"
     }
-  },
-  "christmas_tree": {
-    "title": "Christmas Tree",
-    "desc": {
-      "ko": "글자 트리가 자라고 전구, 별, 선물이 붙은 뒤 인사말이 타이핑된다",
-      "en": "A tree of letters grows, lights up, and types out a greeting"
-    }
   }
 }

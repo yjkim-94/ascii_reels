@@ -18,7 +18,7 @@ AskUserQuestion으로 4문항(컨셉·클라이맥스, 분위기·색, 문구, �
 ## 1. 스토리보드 (사람 승인 1)
 
 1. 인터뷰 답을 바탕으로 `storyboards/_template.md`를 복사해 `storyboards/<slug>.md` 초안을 채운다.
-   예시는 `storyboards/christmas_tree.md`. 장면표의 연출은 `GUIDE.md` 3번 연출 패턴 목록에서 고른다.
+   예시는 `storyboards/saturn.md`. 장면표의 연출은 `GUIDE.md` 3번 연출 패턴 목록에서 고른다.
 2. 지킬 것
    - 길이 15초 이하. 첫 1초 안에 움직임(훅). 형체 완성은 55~70% 지점.
    - 클라이맥스는 하나, 앞 장면보다 확실히 강하게(색 전환, 빛 터짐, 문구 등).
@@ -34,7 +34,7 @@ AskUserQuestion으로 4문항(컨셉·클라이맥스, 분위기·색, 문구, �
 ## 2. 주제 스크립트
 
 `themes/<slug>.py`. 규약은 `README.md` "주제 스크립트 규약". 참고 구현은
-`themes/christmas_tree.py`(2D), `themes/jellyfish_sample.py`(3D 점 구름).
+`themes/saturn.py`(3D 점 구름, 조명, z-buffer). 그 밖의 기능은 `README.md` 규약을 본다.
 
 - 필수 상수: `TITLE`, `DURATION`(<=15), `SCENES = [(이름, 시작, 끝), ...]`(스토리보드 장면표와 같게), `POSTER_T`(썸네일 시각, 보통 클라이맥스 직후).
 - 시간 구간은 `T_*` 상수로 맨 위에 모은다. 화면에 코드가 나오므로 이 부분이 "타임라인"으로 읽혀야 한다.
