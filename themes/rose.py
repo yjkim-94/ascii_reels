@@ -25,8 +25,8 @@ SCENES = [("stem breaks soil", 0.0, 1.0), ("stem + leaves", 0.8, 4.0),
 POSTER_T = 11.4
 
 # ---------- layout (model units, y down, z toward us) ----------
-CY, SCALE = 0.40, 1.0     # model y = 0 (top of stem) -> screen Y 0.40
-BASE_Y = 0.874            # stem base sits on the soil at screen Y 0.83
+CY, SCALE = 0.44, 1.0     # model y = 0 (top of stem) -> screen Y 0.44
+BASE_Y = 0.79             # stem base sits on the soil at screen Y 0.83
 GROUND = 0.83
 STEM_R = 0.022
 HEAD_TILT = -0.85         # lean the flower so we look into it
@@ -34,11 +34,12 @@ SPIN = 0.25               # flower turns around its own axis, rad / s
 
 # five petal layers, inner (0) to outer (4)
 N_LAYER = [3, 5, 7, 9, 10]                       # 34 petals
-P_LEN = [0.17, 0.24, 0.31, 0.38, 0.44]
-P_R0 = [0.012, 0.030, 0.050, 0.070, 0.085]
+P_LEN = [0.20, 0.28, 0.36, 0.44, 0.50]
+P_R0 = [0.014, 0.036, 0.058, 0.080, 0.098]
+P_WIDE = [0.78, 0.72, 0.68, 0.64, 0.62]          # gaps show between
 P_SHUT = [0.08, 0.14, 0.20, 0.26, 0.32]          # bud angle (rad)
-P_OPEN = [0.22, 0.45, 0.70, 0.95, 1.18]          # bloom angle
-P_CURL = [0.15, 0.35, 0.55, 0.75, 0.95]          # tip curls back
+P_OPEN = [0.20, 0.42, 0.65, 0.88, 1.05]          # bloom angle
+P_CURL = [0.15, 0.30, 0.45, 0.60, 0.75]          # tip curls back
 OPEN_STEP, OPEN_DUR = 0.6, 1.1                   # outer layer first
 
 CRIMSON = np.array([0.78, 0.05, 0.15])
@@ -59,14 +60,25 @@ phi = np.concatenate([np.arange(n) / n * 2 * np.pi + k * 2.4
                       for k, n in enumerate(N_LAYER)])
 L_ = layer[:, None, None]
 PH = phi[:, None, None]
-P_START = T_OPEN[0] + (4 - layer) * OPEN_STEP
+in_layer = np.concatenate([np.arange(n) for n in N_LAYER])
+P_START = (T_OPEN[0] + (4 - layer) * OPEN_STEP + in_layer * 0.05
+           + rng.uniform(0, 0.08, len(layer)))
+# every petal a little different
+J_LEN = 1 + rng.normal(0, 0.07, len(layer))
+J_TH = rng.normal(0, 0.06, len(layer))
+J_CURL = rng.normal(0, 0.10, len(layer))
+# outlines: both long edges and the rounded tip of every petal
+UO = np.linspace(0.05, 1, 36)[None, :, None]
+VO = np.array([-1.0, 1.0])[None, None, :]
+UT = np.ones((1, 1, 1))
+VT = np.linspace(-1, 1, 20)[None, None, :]
 EDGE = np.maximum(np.abs(V) ** 4, U ** 6)        # rim of each petal
 P_COL = (CRIMSON + (SCARLET - CRIMSON) * (1 - L_[..., None] / 4.0)
          * 0.8) * (0.55 + 0.45 * np.minimum(U / 0.25, 1))[..., None]
 
 
 def petal_cloud(theta, curl, length, r0, cup, phi_, u=U, v=V,
-                widen=0.8):
+                widen=0.8, reflex=0.0):
     """curved petal surfaces; returns points (n, nu, nv, 3)."""
     rad = np.stack([np.cos(phi_), 0 * phi_, np.sin(phi_)], -1)
     tan = np.stack([-np.sin(phi_), 0 * phi_, np.cos(phi_)], -1)
@@ -76,10 +88,13 @@ def petal_cloud(theta, curl, length, r0, cup, phi_, u=U, v=V,
     du = 1.0 / u.shape[1]
     spine = r0[..., None] * rad + np.cumsum(d, axis=1) * du \
         * length[..., None]
-    w = widen * length * u ** 0.6 * (1 - 0.35 * u ** 4)
+    w = widen * length * u ** 0.55 * (1 - 0.3 * u ** 5)
     side = tan * (v * w)[..., None]
     cupd = -rad * (cup * v ** 2 * w)[..., None]
-    return spine + side + cupd
+    # the edges of an open petal roll outward
+    roll = reflex * (np.clip(np.abs(v) - 0.55, 0, 1) / 0.45) ** 2
+    rolld = rad * (roll * w * u)[..., None]
+    return spine + side + cupd + rolld
 
 
 def normals(P):
@@ -258,25 +273,31 @@ def draw(g, t):
     po = smooth(np.clip((t - P_START) / OPEN_DUR, 0, 1))  # per petal
     size = (0.75 * kb + 0.25 * po.mean()) * (kb > 0)
     if size > 0:
-        lk = np.array(P_LEN)[layer]
+        lk = np.array(P_LEN)[layer] * J_LEN
         th = np.array(P_SHUT)[layer] + (np.array(P_OPEN)[layer]
+                                       + J_TH
                                        - np.array(P_SHUT)[layer]) * po
-        cu = np.array(P_CURL)[layer] * po
+        cu = (np.array(P_CURL)[layer] + J_CURL) * po
         cup = 0.5 - 0.25 * po
-        P = petal_cloud(th[:, None, None], cu[:, None, None],
-                        lk[:, None, None] * size,
-                        np.array(P_R0)[layer][:, None, None] * size,
-                        cup[:, None, None], PH)
+
+        def petals(u, v):
+            c = lambda a: a[:, None, None]
+            return petal_cloud(c(th), c(cu), c(lk) * size,
+                               c(np.array(P_R0)[layer]) * size,
+                               c(cup), PH, u, v,
+                               c(np.array(P_WIDE)[layer]),
+                               c(0.5 * po))
+        P = petals(U, V)
         n = normals(P)
         Pv = head_view(P, t)
         nv = head_view(n, t) - stem_axis(1.0, t)
         nv = np.where(nv[..., 2:3] < 0, -nv, nv)  # two-sided
-        lum, _ = light(nv.reshape(-1, 3), t, key=key, ambient=0.08,
-                       key_w=0.5, rim_w=0.35, spec_w=0.2,
+        lum, _ = light(nv.reshape(-1, 3), t, key=key, ambient=0.12,
+                       key_w=0.6, rim_w=0.35, spec_w=0.2,
                        glint_cut=9)
         # darker toward the base, bright rims: each petal reads alone
-        lum = lum.reshape(P.shape[:3]) * (0.45 + 0.55 * U)
-        lum = lum + 0.28 * EDGE * (po[:, None, None] > 0)
+        vein = 0.85 + 0.15 * np.cos(V * 9) * (U > 0.15)
+        lum = lum.reshape(P.shape[:3]) * (0.5 + 0.5 * U) * vein
         # each layer's rim flares while it opens
         flare = np.sin(np.pi * po)[:, None, None] * EDGE * 0.5
         kc = smooth(ramp(t, 10.0, 10.6)) \
@@ -287,6 +308,19 @@ def draw(g, t):
                                                 + 0.3 * kc))[..., None]
         col = col + (GOLD - col) * core[..., None]
         add(Pv, col, lum)
+
+        # petal outlines: bright edge lines in direction glyphs, nudged
+        # toward us so a front petal's rim cuts across the ones behind
+        rim_on = 0.85 + 0.15 * np.sin(np.pi * po)[:, None, None]
+        rim_col = np.array([1.0, 0.45, 0.55])
+        for uu, vv, ax_ in ((UO, VO, 1), (UT, VT, 2)):
+            E = head_view(petals(uu, vv), t)
+            dE = np.gradient(E, axis=ax_)
+            ech = dir_chars(dE[..., 0].ravel(), dE[..., 1].ravel())
+            E = E + np.array([0, 0, 0.004])
+            el = np.broadcast_to(rim_on, E.shape[:3]) * (1 + kc * 0.4)
+            ec = rim_col + (PINK - rim_col) * kc * 0.5
+            add(E, ec, el, ech)
 
         # sepals: five green blades that fold back and down
         sphi = np.arange(5)[:, None, None] / 5 * 2 * np.pi + 0.3
