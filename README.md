@@ -20,7 +20,8 @@ ffmpeg(libx264)와 DejaVu 글꼴(`/usr/share/fonts/truetype/dejavu/`)이 필요�
   큰 글씨 자막, HUD, 코드 패널, mp4 인코딩. 주제와 무관한 것은 모두 여기.
 - `themes/*.py`: 주제 하나 = 파일 하나. 이 파일이 그대로 영상 하단에 나온다.
   `christmas_tree.py`(2D 마스크, 15초), `jellyfish_sample.py`(3D 점 구름, 3초 시안),
-  `crystal_sample.py`(조명·반짝임·바닥 반사, 3초 시안), `footage_sample.py`(실사 영상 글자화, 3초 시안).
+  `crystal_sample.py`(조명·반짝임·바닥 반사, 3초 시안), `footage_sample.py`(실사 영상 글자화, 3초 시안),
+  `lake_sample.py`(그림 층·바닥 원근·크기가 다른 글자, 3초 시안).
 - `storyboards/*.md`: 주제별 스토리보드. `_template.md`를 복사해 쓴다. `GUIDE.md`는 기획 기준, 인터뷰 4문항, 연출 패턴 목록.
 - `sources/`: 실사 변환용 원본 영상(`test_fractal.mp4`는 ffmpeg로 만든 시험용).
 - `render.py`: 영상/정지 화면. `check.py`: 자동 점검 + 점검 시트. `publish.py`: 갤러리 등록.
@@ -61,6 +62,11 @@ Claude Code에서는 `/new-reel <주제>`가 이 순서를 따른다(`.claude/sk
    - 조명: `light(n, t)` - 화면 기준 법선으로 주광, 회전 테두리광, 반사광, 반짝임(glint)을 계산해 (밝기, 반짝임 여부)를 준다.
    - 실사 영상: `clip = Footage("sources/x.mp4", start=, length=)`를 모듈에서 한 번 읽고, `draw_footage(g, clip.at(t), mask=...)`로 그린다.
      어두운 칸은 비우고 원본 색을 유지한다. 소스 규칙은 `storyboards/GUIDE.md` 4번.
+   - 그림 층: `draw()`가 `{"under": 이미지}`를 돌려주면 글자 아래에 깔린다(빛 번짐 없음, 값 0~1).
+     `PH x PW`(274x270) 해상도로 계산하면 엔진이 확대한다. 도우미: `pic_coords`, `vgradient`(세로 그라데이션),
+     `noise2d(n, beta, seed)`(이음새 없는 1/f^beta 노이즈, 구름·언덕), `sample(tex, u, v)`(반복 읽기).
+   - 바닥 평면 원근: `ground(x, z, horizon, cam)` -> (화면 X, Y, 크기 배율 = 1/z), 반대 방향은 `ground_uv`.
+   - 크기가 다른 글자: `{"sprites": dict(x, y, ch, size, rgb)}`. 격자와 상관없이 원하는 위치·px 크기로 찍는다(멀수록 작게).
    - 바닥 반사: `splat_reflection(g, P, rgb, lum, floor_y)`를 본체 `splat` 전에 부른다.
    - 코드 패널의 타이핑 커서와 오른쪽 위 경과 시간(`● t 1.23s`)은 엔진이 자동으로 그린다. 끄려면 `SHOW_CLOCK = False`.
 5. 시간 도우미: `ramp(t, a, b)`, `ease`(빠르게 시작), `smooth`(고르게), `pop`(튀어나옴).

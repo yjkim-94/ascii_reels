@@ -281,6 +281,118 @@ def draw_footage(g, img, gain=1.0, gamma=0.9, floor=0.07, mask=None, alpha=1.0):
     return len(rr)
 
 
+# ---------- 그림 층 (글자 아래에 깔리는 일반 이미지) ----------
+PH, PW = TOP_H // 4, W // 4          # 그림 층 계산 해상도(엔진이 확대한다)
+
+
+def pic_coords(h=PH, w=PW):
+    """그림 층 해상도의 화면 좌표 (X: -1..1, Y: 0..1)."""
+    Y, X = np.mgrid[0:h, 0:w].astype(np.float32)
+    return (X + 0.5) / w * 2 - 1, (Y + 0.5) / h
+
+
+def upscale(img):
+    """그림 층(h, w, 3, 값 0~1)을 위쪽 화면 크기로 부드럽게 확대."""
+    img = np.asarray(img, np.float32)
+    if img.shape[:2] == (TOP_H, W):
+        return img
+    u8 = Image.fromarray((np.clip(img, 0, 1) * 255).astype(np.uint8))
+    return np.asarray(u8.resize((W, TOP_H), Image.BILINEAR), np.float32) / 255.0
+
+
+def vgradient(stops, h=PH, w=PW):
+    """세로 그라데이션. stops = [(y, (r, g, b)), ...], y는 0(위)~1(아래)."""
+    ys = np.array([y for y, _ in stops], np.float32)
+    cs = np.array([c for _, c in stops], np.float32)
+    Y = (np.arange(h, dtype=np.float32) + 0.5) / h
+    col = np.stack([np.interp(Y, ys, cs[:, k]) for k in range(3)], -1)
+    return np.broadcast_to(col[:, None, :], (h, w, 3)).copy()
+
+
+def noise2d(n=256, beta=2.0, seed=0):
+    """이어 붙여도 이음새 없는 1/f^beta 노이즈(n x n). 값은 0~1에 고르게 퍼지도록 순위로 맞춘다.
+    beta 2 안팎이면 구름, 3 이상이면 완만한 언덕, 1이면 거친 질감."""
+    rng = np.random.default_rng(seed)
+    f = np.fft.fftfreq(n)
+    k = np.hypot(*np.meshgrid(f, f))
+    k[0, 0] = 1.0
+    spec = (rng.normal(size=(n, n)) + 1j * rng.normal(size=(n, n))) / k ** (beta / 2)
+    spec[0, 0] = 0
+    img = np.real(np.fft.ifft2(spec))
+    rank = np.empty(n * n, np.float32)
+    rank[np.argsort(img.ravel())] = np.linspace(0, 1, n * n)
+    return rank.reshape(n, n)
+
+
+def sample(tex, u, v):
+    """텍스처를 (u, v) 좌표(1 = 한 바퀴)로 반복해서 읽는다(최근접)."""
+    n, m = tex.shape[:2]
+    return tex[(np.asarray(v) * n).astype(int) % n, (np.asarray(u) * m).astype(int) % m]
+
+
+# ---------- 바닥 평면 원근 ----------
+def ground(x, z, horizon=0.5, cam=0.25, f=1.0):
+    """바닥 위 점(x 옆, z 앞으로 멀어짐, 높이 0) -> 화면 (X, Y, 크기 배율).
+    horizon: 지평선 화면 높이(Y), cam: 카메라 높이. 크기 배율 = f / z (z = f일 때 1)."""
+    z = np.maximum(np.asarray(z, np.float32), 1e-3)
+    s = f / z
+    X = np.asarray(x) * s
+    Y = horizon + cam * s * (W / 2) / TOP_H
+    return X, Y, s
+
+
+def ground_uv(X, Y, horizon=0.5, cam=0.25, f=1.0):
+    """화면 (X, Y) -> 바닥 좌표 (x, z). 지평선 위는 z = inf. 바닥에 텍스처를 입힐 때 쓴다."""
+    d = (np.asarray(Y) - horizon) * TOP_H / (W / 2)
+    with np.errstate(divide="ignore"):
+        z = np.where(d > 0, cam * f / np.maximum(d, 1e-6), np.inf)
+    return np.asarray(X) * z / f, z
+
+
+# ---------- 크기가 다른 글자(스프라이트) ----------
+_SPRITE_CACHE = {}
+
+
+def _glyph(ch, size):
+    key = (ch, size)
+    if key not in _SPRITE_CACHE:
+        font = ImageFont.truetype(MONO_BOLD, size)
+        l, tp, r, b = font.getbbox(ch)
+        im = Image.new("L", (max(r - l, 1), max(b - tp, 1)), 0)
+        ImageDraw.Draw(im).text((-l, -tp), ch, font=font, fill=255)
+        _SPRITE_CACHE[key] = np.asarray(im, np.float32) / 255.0
+    return _SPRITE_CACHE[key]
+
+
+def sprite_layer(sp):
+    """격자와 상관없이 원하는 위치·크기로 찍는 글자들. 원근(가까울수록 크게)에 쓴다.
+
+    sp = dict(x=화면 X, y=화면 Y, ch=글자 문자열 또는 글자 목록, size=px, rgb=(N, 3))
+    겹치면 더 밝은 쪽이 남는다. 빛 번짐은 같이 받는다."""
+    out = np.zeros((TOP_H, W, 3), np.float32)
+    x = np.asarray(sp["x"], np.float32)
+    y = np.asarray(sp["y"], np.float32)
+    n = len(x)
+    ch = sp["ch"]
+    ch = [ch] * n if isinstance(ch, str) and len(ch) == 1 else list(ch)
+    size = np.broadcast_to(np.asarray(sp["size"], np.float32), (n,))
+    rgb = np.broadcast_to(np.asarray(sp["rgb"], np.float32), (n, 3))
+    px = (x * W / 2 + W / 2).astype(int)
+    py = (y * TOP_H).astype(int)
+    for i in np.argsort(size):              # 작은(먼) 것부터
+        sz = int(np.clip(round(size[i]), 6, 96))
+        gl = _glyph(ch[i], sz)
+        h, w = gl.shape
+        x0, y0 = px[i] - w // 2, py[i] - h // 2
+        xa, ya = max(x0, 0), max(y0, 0)
+        xb, yb = min(x0 + w, W), min(y0 + h, TOP_H)
+        if xa >= xb or ya >= yb:
+            continue
+        patch = gl[ya - y0:yb - y0, xa - x0:xb - x0, None] * rgb[i]
+        out[ya:yb, xa:xb] = np.maximum(out[ya:yb, xa:xb], patch)
+    return out
+
+
 # ---------- 배경 도우미 ----------
 class LetterRain:
     """화면 전체에 흐리게 깔리는 글자. 열마다 다른 속도로 천천히 내려온다."""
@@ -520,7 +632,11 @@ class Renderer:
         top = compose(g)
         if res.get("caption"):
             top += caption_layer(*res["caption"])
+        if res.get("sprites"):
+            top = np.maximum(top, sprite_layer(res["sprites"]))
         top = bloom(top, getattr(self.theme, "GLOW", 0.9))
+        if res.get("under") is not None:       # 그림 층은 빛 번짐 없이 맨 아래
+            top = top + upscale(res["under"])
         frame = np.zeros((H, W, 3), np.float32)
         frame[:TOP_H] = top
         self.panel.draw(frame, t, self.duration)
