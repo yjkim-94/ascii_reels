@@ -1,7 +1,7 @@
 You are going to make a short vertical ASCII-art reel with a single Python script.
 
 ## Output
-- One file `<slug>.py` that renders `<slug>.mp4`: 1080x1920, 30 fps, H.264, yuv420p, no audio, at most 15 seconds.
+- One file `<slug>.py` that renders `<slug>.mp4`: 1080x1920, 30 fps, H.264, yuv420p, no audio, at most 20 seconds (the storyboard states the exact length).
 - Use only Python 3, numpy, Pillow and ffmpeg (pipe raw RGB frames into ffmpeg). Install what is missing.
 - Every frame must be a pure function of the time `t` (no state carried between frames), so any single frame can be rendered on its own for checking.
 

@@ -18,7 +18,7 @@ COLS, ROWS = W // CW, 61             # 108 x 61 칸
 TOP_H = ROWS * CH                    # 위쪽 렌더 영역 높이 1098px
 BAR_H = 62                           # 코드 패널 머리줄
 CODE_Y = TOP_H + BAR_H
-MAX_DURATION = 15.0                  # 모든 영상은 15초 이내
+MAX_DURATION = 20.0                  # 모든 영상은 20초 이내
 
 FONT_DIR = "/usr/share/fonts/truetype/dejavu/"
 MONO = FONT_DIR + "DejaVuSansMono.ttf"
