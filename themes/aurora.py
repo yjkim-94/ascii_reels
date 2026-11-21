@@ -1,4 +1,4 @@
-"""aurora: stars wake, curtains of light grow, then a corona bursts."""
+"""aurora: stars wake, curtains grow, then a substorm erupts."""
 import numpy as np
 from engine import (CIDX, dir_chars, ease, noise2d, pic_coords, ramp,
                     smooth, vgradient)
@@ -11,31 +11,33 @@ rng = np.random.default_rng(41)
 
 # ---------- timeline (seconds) ----------
 T_METEOR = (0.0, 1.2)     # a shooting star lights the first stars
-T_REVEAL = (1.0, 4.0)     # sky, forest and frozen lake appear
+T_REVEAL = (1.0, 4.0)     # sky, forest and lake appear
 T_BANDS = [4.0, 7.0, 8.0, 9.0, 10.0]   # each aurora band is born
-T_GATHER = (11.0, 12.0)   # bands are pulled toward the zenith
-T_CORONA = (12.0, 15.0)   # rays burst from overhead, colour waves
+T_CALM = (11.0, 12.0)     # the curtains dim and hold their breath
+T_WAVE = (12.0, 12.8)     # a pulse runs along the bands, left->right
+T_STORM = (12.8, 15.0)    # substorm: folds, tall rays, pink hems
+T_SETTLE = (15.0, 16.5)   # it slows down into soft green
 T_FADE = (16.5, 18.0)     # aurora, land, then stars fade to black
 SCENES = [("meteor", 0.0, 1.5), ("landscape", *T_REVEAL),
           ("first band", 4.0, 7.0), ("more bands", 7.0, 11.0),
-          ("gather", *T_GATHER), ("corona", *T_CORONA),
-          ("afterglow", 15.0, 16.5), ("fade", *T_FADE)]
-POSTER_T = 13.6
+          ("calm", *T_CALM), ("light wave", *T_WAVE),
+          ("substorm", *T_STORM), ("afterglow", *T_SETTLE),
+          ("fade", *T_FADE)]
+POSTER_T = 14.2
 
 # ---------- layout (screen: X -1..1, Y 0 top .. 1 bottom) ----------
 HORIZON = 0.60            # tree line / far shore
 MIRROR = 0.612            # lake reflects the sky about this line
 LAKE_END = 0.86
-ZENITH = (0.0, 0.07)      # the corona point overhead
 ASPECT = 1098 / 540
 
 GREEN_EDGE = np.array([0.35, 1.00, 0.60])
 GREEN = np.array([0.10, 0.80, 0.45])
 VIOLET = np.array([0.60, 0.30, 0.95])
 PINK = np.array([1.00, 0.40, 0.70])
+WHITE = np.array([0.90, 1.00, 0.95])
 STAR = np.array([0.85, 0.90, 1.00])
 ICE = np.array([0.05, 0.10, 0.18])
-CRACK = np.array([0.55, 0.75, 1.00])
 
 # five bands: base height, wave amplitude, frequency, phase, height
 B_BASE = np.array([0.50, 0.42, 0.35, 0.28, 0.21])
@@ -73,24 +75,17 @@ ST_ON = np.concatenate([T_METEOR[0] + _s * 1.2,
                         rng.uniform(1.4, 3.6, N_STAR - 60)])
 ST_PH = rng.uniform(0, 2 * np.pi, N_STAR)
 
-# cracks in the ice: short random walks, revealed one by one
-CRACKS = []
-for i in range(9):
-    x, y = rng.uniform(-0.85, 0.85), rng.uniform(0.66, 0.82)
-    a = rng.uniform(0, np.pi)
-    pts = []
-    for _ in range(22):
-        pts.append((x, y))
-        a += rng.normal(0, 0.5)
-        x += 0.02 * np.cos(a)
-        y += 0.006 * np.sin(a)
-    CRACKS.append(np.array(pts))
-CR_T = np.linspace(2.0, 3.8, 9)
+# storm level over time and its running integral (faster motion)
+_TT = np.linspace(0, DURATION, 2000)
+_G = smooth(np.clip((_TT - 12.5) / 0.7, 0, 1)) \
+    * (1 - smooth(np.clip((_TT - T_SETTLE[0]) / 1.5, 0, 1)))
+_GI = np.concatenate([[0], np.cumsum((_G[1:] + _G[:-1]) / 2
+                                     * np.diff(_TT))])
 
-# climax shooting stars: start, end, time
-SHOOT = [((-0.2, 0.05), (-0.9, 0.35), 12.4),
-         ((0.3, 0.02), (0.95, 0.30), 13.2),
-         ((-0.6, 0.08), (0.1, 0.40), 14.0)]
+
+def storm(t):
+    """global storm level and its integral up to t."""
+    return float(np.interp(t, _TT, _G)), float(np.interp(t, _TT, _GI))
 
 
 def aurora(X, Y, t):
@@ -98,64 +93,59 @@ def aurora(X, Y, t):
     A = np.zeros_like(X)
     C = np.zeros(X.shape + (3,))
     kv = smooth(ramp(t, 7.0, 11.0))            # violet tops grow
-    kg = smooth(ramp(t, *T_GATHER))            # pulled to the zenith
-    kc = smooth(ramp(t, T_CORONA[0], 12.6))
+    calm = 1 - 0.3 * smooth(ramp(t, 11.0, 11.5)) \
+        * (1 - smooth(ramp(t, *T_WAVE)))
+    G, GI = storm(t)
+    xw = -1.3 + 2.8 * ramp(t, *T_WAVE)         # light wave front
+    awake = smooth(np.clip((xw - X) / 0.4, 0, 1)) \
+        * (t >= T_WAVE[0]) * (1 - smooth(ramp(t, 15.0, 16.5)))
+    pulse = np.exp(-((X - xw) / 0.12) ** 2) * (0 < ramp(t, *T_WAVE) < 1)
+    S = awake * smooth(ramp(t, 12.3, 13.3))     # storm where awake
+    phase = 0.7 * t + 2.2 * GI                 # faster when stormy
+    drift = 0.03 * t + 0.12 * GI
     for b in range(5):
         a = smooth(ramp(t, T_BANDS[b], T_BANDS[b] + 1.5))
         if a <= 0:
             continue
         base = B_BASE[b] + (0.08 if b == 0 else 0.0) \
             * (1 - smooth(ramp(t, 4.0, 7.0)))   # first band rises
-        y0 = base + B_AMP[b] * np.sin(B_FREQ[b] * X + 0.7 * t
-                                      + B_PH[b]) \
-            + 0.012 * np.sin(5.3 * X - 1.1 * t + b)
-        y0 = y0 * (1 - 0.5 * kg) + 0.5 * kg * (0.10 + 0.28 * X ** 2)
+        y0 = base + B_AMP[b] * np.sin(B_FREQ[b] * X + phase + B_PH[b]) \
+            + 0.012 * np.sin(5.3 * X - 1.6 * phase + b)
+        # substorm folds: tighter S-curls that roll along the band
+        y0 = y0 + S * 0.045 * np.sin(4.2 * X + 2.4 * phase + b * 1.7)
         hgt = y0 - Y                           # height above the edge
-        u = (X * 0.35 + 0.03 * t * (1 + b % 2) + b * 0.2) % 1.0
+        u = (X * 0.35 + drift * (1 + b % 2) + b * 0.2) % 1.0
         ray = RAYS[(b * 37) % 256, (u * 256).astype(int)]
         ray = 0.35 + 0.65 * np.clip((ray - 0.25) / 0.6, 0, 1) ** 1.5
-        curtain = np.where(hgt >= 0, np.exp(-hgt / B_H[b]),
+        tall = B_H[b] * (1 + 1.8 * S)          # rays reach the top
+        curtain = np.where(hgt >= 0, np.exp(-hgt / tall),
                            np.exp(hgt / 0.006))
         side = np.clip(1.15 - np.abs(X) * 0.5, 0, 1)
-        I = a * curtain * ray * side * (0.55 + 0.1 * b)
+        I = a * curtain * ray * side * (0.55 + 0.1 * b) * calm \
+            * (1 + 0.7 * S + 1.2 * pulse)
         edge = np.exp(-np.clip(hgt, 0, None) / 0.035)[..., None]
         top = (1 - edge) * (0.35 + 0.65 * kv)
         col = GREEN_EDGE * edge + GREEN * (1 - edge) * (1 - top) \
             + VIOLET * top
-        col = col + (PINK - col) * (kc * 0.6 * top)
+        hem = (S * 0.85)[..., None] * edge     # pink lower hems
+        col = col + (PINK - col) * hem
+        col = col + (WHITE - col) * (0.6 * pulse)[..., None]
         C += col * I[..., None]
         A += I
-    # corona: rays from overhead and colour waves sweeping outward
-    kr = smooth(ramp(t, *T_CORONA)) * 0 + kc \
-        * (1 - 0.5 * smooth(ramp(t, 14.0, 16.0)))
-    if kr > 0:
-        dx, dy = X - ZENITH[0], (Y - ZENITH[1]) * ASPECT
-        d = np.hypot(dx, dy)
-        th = (np.arctan2(dy, dx) / (2 * np.pi) + 0.02 * t) % 1.0
-        r = RAYS[77, (th * 256).astype(int)]
-        I = kr * np.clip((r - 0.3) / 0.5, 0, 1) * np.exp(-d / 0.55) \
-            * (Y < HORIZON)
-        w = np.sin(d * 7 - (t - 12.0) * 4)
-        col = np.where((w > 0.3)[..., None], PINK,
-                       np.where((w > -0.3)[..., None], VIOLET, GREEN))
-        C += col * I[..., None] * 0.9
-        A += I * 0.9
     return A, C
 
 
 def camera(t):
     keys = [(0.0, 1.25, 0.0, 0.68), (1.0, 1.25, 0.0, 0.68),
             (4.0, 1.0, 0.0, 0.60), (11.0, 1.08, 0.0, 0.30),
-            (12.0, 1.08, 0.0, 0.30), (12.3, 1.0, 0.0, 0.30),
-            (15.0, 1.0, 0.0, 0.30), (16.5, 1.05, 0.0, 0.30),
-            (18.0, 1.25, 0.0, 0.68)]
+            (12.0, 1.08, -0.25, 0.32), (12.8, 1.08, 0.25, 0.32),
+            (14.2, 1.0, 0.0, 0.30), (15.0, 1.0, 0.0, 0.30),
+            (16.5, 1.05, 0.0, 0.30), (18.0, 1.25, 0.0, 0.68)]
     i = max(j for j in range(len(keys)) if keys[j][0] <= t)
     k0, k1 = keys[i], keys[min(i + 1, len(keys) - 1)]
     u = smooth(ramp(t, k0[0], k1[0])) if k1[0] > k0[0] else 0.0
     z, fx, fy = (a + (b - a) * u for a, b in zip(k0[1:], k1[1:]))
-    hit = t - T_CORONA[0]
-    shake = 0.008 * np.exp(-hit / 0.35) if hit > 0 else 0.0
-    return dict(zoom=z, focus=(fx, fy), shake=shake)
+    return dict(zoom=z, focus=(fx, fy))
 
 
 def meteor(g, a, b, k, bright, tail=0.18, width=1):
@@ -218,8 +208,8 @@ def draw(g, t):
     under = np.where(lake[:, None, None], lake_img, sky)
 
     # ============= grid: stars, meteors, aurora rays =============
-    tw = 0.35 + 0.65 * np.clip(np.sin((2 + 4 * smooth(ramp(
-        t, *T_GATHER))) * t + ST_PH), 0, 1) ** 2
+    tw = 0.35 + 0.65 * np.clip(np.sin((2 + 3 * smooth(ramp(
+        t, *T_CALM))) * t + ST_PH), 0, 1) ** 2
     on = (t >= ST_ON)
     pop_ = 1 + 1.5 * np.exp(-np.clip(t - ST_ON, 0, None) / 0.15)
     sl = np.clip((t - ST_ON) / 0.1, 0, 1) * tw * f_star * on * pop_
@@ -231,10 +221,6 @@ def draw(g, t):
     if t < T_METEOR[1]:
         meteor(g, MET_A, MET_B, ease(ramp(t, *T_METEOR)), 1.2,
                tail=0.35, width=2)
-    for a, b, ts in SHOOT:
-        k = ramp(t, ts, ts + 0.6)
-        if 0 < k < 1:
-            meteor(g, a, b, ease(k), 1.0 - 0.5 * k)
 
     A_g, C_g = aurora(g.X, g.Y, t)             # rays as letters
     sky_cells = g.Y < HORIZON - 0.01
@@ -252,41 +238,21 @@ def draw(g, t):
     g.put(m, rch[m], (Cr / np.maximum(Ar, 1e-6)[..., None]
                       * np.clip(Ar, 0, 1)[..., None])[m]
           * 0.5 * f_aur * f_land)
-    # cracks in the ice light up one by one, with glints
-    for i, cr in enumerate(CRACKS):
-        k = ramp(t, CR_T[i], CR_T[i] + 0.5)
-        if k <= 0:
-            continue
-        n = max(int(k * len(cr)), 2)
-        X, Y = cr[:n, 0], cr[:n, 1]
-        ch = dir_chars(np.gradient(X), np.gradient(Y) * ASPECT)
-        glint = 0.5 + 0.5 * np.exp(-((t - CR_T[i] - 0.4) / 0.2) ** 2)
-        rr, cc = g.to_cell(X, Y)
-        g.put_cells(rr, cc, ch, CRACK[None] * glint * 0.7 * f_land)
-    # corona rays as letters during the climax
-    kc = smooth(ramp(t, T_CORONA[0], 12.6)) \
-        * (1 - 0.5 * smooth(ramp(t, 14.0, 16.0))) * f_aur
-    if kc > 0:
-        for k in range(24):
-            ang = k / 24 * 2 * np.pi + 0.05 * t
-            ln = (0.25 + 0.25 * (k % 3 == 0)) * kc
-            s = np.linspace(0.04, 0.04 + ln, 20)
-            X = ZENITH[0] + np.cos(ang) * s
-            Y = ZENITH[1] + np.sin(ang) * s / ASPECT
-            ok = Y < HORIZON - 0.02
-            ch = dir_chars(np.full(20, np.cos(ang)),
-                           np.full(20, np.sin(ang)))
-            rr, cc = g.to_cell(X[ok], Y[ok])
-            w = np.sin(s * 7 - (t - 12.0) * 4)[ok]
-            col = np.where((w > 0.3)[:, None], PINK,
-                           np.where((w > -0.3)[:, None], VIOLET,
-                                    GREEN_EDGE))
-            g.put_cells(rr, cc, ch[ok], col * 1.3 * kc
-                        * np.linspace(1, 0.2, 20)[ok][:, None])
+    # stars mirrored in the lake, stretched a little by the ripples
+    ry = 2 * MIRROR - ST_Y
+    inl = (ry > MIRROR + 0.008) & (ry < LAKE_END) & on
+    if inl.any():
+        sh = 0.006 * np.sin(3 * t + ST_PH[inl] * 4)
+        rl = sl[inl] * 0.5 * f_land
+        for k, w in ((0, 1.0), (1, 0.45)):
+            rr, cc = g.to_cell(ST_X[inl] + sh, ry[inl] + k * 0.017)
+            g.put_cells(rr, cc, np.where(rl > 0.4, CIDX["+"],
+                                         CIDX["."]),
+                        STAR[None] * (rl * w)[:, None])
 
     bands = sum(t >= T_BANDS[b] + 0.75 for b in range(5))
     kp = 1 + 2 * ramp(t, 4.0, 7.0) + 3 * ramp(t, 7.0, 11.0) \
-        + 2 * ramp(t, *T_GATHER) + ramp(t, 12.0, 12.5)
+        + 2 * ramp(t, *T_WAVE) + ramp(t, 12.8, 13.3)
     n_lit = int((g.col.max(-1) > 0.05).sum())
     return {"under": np.clip(under, 0, 1), "camera": camera(t),
             "hud": [HANDLE,
