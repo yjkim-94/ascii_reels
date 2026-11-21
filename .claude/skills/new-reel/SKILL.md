@@ -70,8 +70,9 @@ python publish.py themes/<slug>.py
 `gallery/manifest.json`에 항목이 생긴다. 이어서 웹 갤러리용으로:
 
 - `gallery/cards.json`에 제목과 한 줄 설명(ko, en)을 넣는다(맨 앞에 넣으면 갤러리 맨 앞).
-- `gallery/prompts/<slug>.ko.md`, `<slug>.en.md`에 복사용 스토리보드를 쓴다(저장소 없이 단독으로 동작해야 하므로
-  오브젝트 크기, 색 값, 장면 시간을 숫자로). 계정 자리는 `@your.handle`.
+- `gallery/prompts/<slug>.ko.md`, `<slug>.en.md`에 복사용 프롬프트를 쓴다. **`storyboards/GUIDE.md` 5번 작성 규칙을 반드시 따른다**
+  (장면표 + 주제 스크립트에서 옮긴 정확한 값, 단위·좌표계, 공식 속 낱말 정의, 숫자 세는 식, 의도된 어긋남). 계정 자리는 `@your.handle`.
+- 재현 시험을 권한다: 저장소를 못 보게 한 에이전트 2개에게 3초 버전을 만들게 하고 원본과 비교해, 추측했다고 보고한 항목을 프롬프트에 반영한다.
 - `node web/build.mjs`로 빌드가 되는지 확인한다.
 
 스토리보드, 주제 스크립트, manifest, cards, prompts를 커밋하고 push하면 Vercel이 자동 배포한다.

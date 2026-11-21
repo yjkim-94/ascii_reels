@@ -13,9 +13,10 @@ You are going to make a short vertical ASCII-art reel with a single Python scrip
 
 ## How the render works
 - Glyph atlas: draw every glyph you use (space, `.,:;*+'|-/\_~=#@%&o0O`, A-Z, a-z, 0-9, `$!?<>{}[]()^`) once into a 10 x 18 bitmap with a bold monospace font (e.g. DejaVu Sans Mono Bold, size 15).
-- Brightness ramp: sort glyphs by ink coverage and pick about 28 evenly spaced ones. A cell's brightness (0-1) picks its glyph from this ramp.
+- Brightness ramp: sort all glyphs except space and `_` by ink coverage (mean of the bitmap) and take 28 evenly spaced entries. The ramp mixes letters, digits and symbols (e.g. `` ` - " ! c | > l C f 7 v e { x n E y 6 k m p d A & H @ M ``); that letter-soup texture is intended. A cell's brightness (0-1) picks `ramp[int(b * 27)]`.
 - Each cell holds one glyph index and one RGB colour (may exceed 1 for highlights). Composite: glyph bitmap x colour, then a bloom pass (downscale 4x, Gaussian blur, upscale, add ~0.9x) for a soft glow.
-- Brighter wins: a cell is only overwritten by something brighter. Fading objects reveal the background instead of leaving black holes.
+- Brighter wins: a cell is only overwritten by something brighter (compare the max RGB channel). Fading objects reveal the background instead of leaving black holes.
+- Inside one 3D draw call the nearest point per cell wins (z-buffer); between separate draw calls and layers (background, objects, text) brighter wins. Draw everything that should occlude each other (e.g. a planet hiding a sun) in the same call.
 - 3D objects are point clouds: sample thousands of surface points (with normals), rotate them, perspective-project to cells, keep the nearest point per cell (z-buffer), and shade with a key light, a moving rim light and occasional specular glints.
 - Thin lines (rays, tentacles, stems) use direction glyphs `| / \ -` matching the screen direction of the line.
 - Background layers: faint twinkling stars or a dim letter rain, so the screen is never dead.
@@ -28,12 +29,18 @@ You are going to make a short vertical ASCII-art reel with a single Python scrip
 ## Reference numbers (aim for a similar look, not pixel-exact)
 - Coordinates: screen `X` runs -1..1 across the width (0 = centre), `Y` runs 0 (top) .. 1 (bottom of the render). 3D model units: 1 = half the screen width, y points down, z points toward the viewer.
 - Projection: `k = f / (f - z)` with `f = 3.2`; screen `X = x*k*scale`, `Y = cy + y*k*scale*540/1098` (so x and y share one unit).
-- Point colour = `rgb * (0.35 + 0.9 * brightness)`. Lighting: key light from upper front `(0, -0.8, 0.6)`, rim light circling at 0.9 rad/s weighted by `(1 - |n.z|)^1.5`, specular exponent 12.
+- Point colour = `rgb * (0.35 + 0.9 * brightness)`.
+- Default lighting (the storyboard overrides any of it): key light `L = normalize(0, -0.8, 0.6)`; rim light `r = normalize(cos 0.9t, -0.4, sin 0.9t)` weighted by `(1 - |n.z|)^1.5`; specular `max(0, n . normalize(L + (0,0,1)))^12`.
 - Bloom: downscale to 1/4, Gaussian blur radius 3, upscale bilinear, add x0.9-1.1.
-- Status block: regular monospace 30 px, colour #e8eaee, 40 px line spacing, 22 px from the left, bottom line 22 px above the code panel. Clock: same font, pink #ff6b9e, top-right, about 37 px from the top.
-- Code panel: header bar 62 px, #1e2026, file name 26 px. Code: regular monospace 24 px, line height 36 px, line numbers 20 px #4e5460 in a 64 px gutter, background #16181d. Colours: keywords #c678dd, functions #61afef, strings #98c379, numbers #d19a66, comments #6a737d, UPPER_CASE constants #56b6c2, other text #dcdfe4. The highlighted line sits 6 lines below the top of the panel, background lifted by about +0.06; the cursor is a 13 px pink block blinking at 2.5 Hz.
+- Status block: regular monospace 30 px, colour #e8eaee, 40 px line spacing, 22 px from the left; the top of the first line is at `y = 1098 - 22 - 40 * lines`. Clock: same font, pink #ff6b9e, text `t  3.27s` right-aligned 24 px from the right edge with its vertical centre at y = 37, and a 14 px pink dot just left of it.
+- Code panel: header bar 62 px, #1e2026, file name 26 px #cdd0d6, `running · 30 fps` 26 px #969ca6 after a 16 px green dot #3fb950. Code: regular monospace 24 px, line height 36 px, line numbers 20 px #4e5460 right-aligned in a 64 px gutter, background #16181d. Colours: keywords #c678dd, functions #61afef, strings #98c379, numbers #d19a66, comments #6a737d, UPPER_CASE constants #56b6c2, other text #dcdfe4. All lines are drawn in full (no per-character typing).
+- Scrolling: `s(t) = S * ease_out_cubic(min(t / (0.92 * length), 1)^1.15)` lines, with `S = min(lines - visible + 4, 6 * length)`; draw with a pixel offset of `s * 36` so it moves smoothly. The highlighted line is `int(s) + 6` (it moves with the text and steps down one line at a time), its background lifted by +0.05/0.06/0.09 RGB, with a 13 px wide pink block cursor right after its last character, blinking on for 0.4 s and off for 0.4 s.
 - Big caption (only if the storyboard has text): bold monospace 46 px, letter spacing +35 %, centred.
 - Encoding: `ffmpeg -f rawvideo -pix_fmt rgb24 -s 1080x1920 -r 30 -i - -c:v libx264 -preset medium -crf 17 -pix_fmt yuv420p -movflags +faststart`.
+
+## Timing and looping
+- All times and speeds in the storyboard are for its stated length. If you make a shorter or longer version, scale every time by the same factor and every speed (rad/s, units/s) by its inverse; keep the code scroll cap, cursor blink and star twinkle in real time.
+- The loop seam applies to the render area only. At the loop point the counters, the clock and the code panel jump back to their start; that is expected.
 
 ## How to work
 1. First show me the storyboard below as a table (scenes, times, motion, colours, climax) and wait for my OK or changes.
