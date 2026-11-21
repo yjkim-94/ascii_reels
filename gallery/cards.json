@@ -1,4 +1,11 @@
 {
+  "aurora": {
+    "title": "Aurora",
+    "desc": {
+      "ko": "별이 켜지고 오로라가 하나씩 자라다 빛의 파도와 함께 하늘 끝까지 타오른다",
+      "en": "Stars wake, auroras grow, then a wave of light sets the whole sky ablaze"
+    }
+  },
   "christmas_tree": {
     "title": "Christmas Tree",
     "desc": {

@@ -34,5 +34,17 @@
     "storyboard": "storyboards/christmas_tree.md",
     "size_mb": 11.0,
     "updated": "2026-11-21"
+  },
+  {
+    "slug": "aurora",
+    "title": "Aurora",
+    "duration": 18.0,
+    "video": "videos/aurora.mp4",
+    "poster": "posters/aurora.jpg",
+    "poster_web": "posters/aurora_web.jpg",
+    "theme": "themes/aurora.py",
+    "storyboard": "storyboards/aurora.md",
+    "size_mb": 19.1,
+    "updated": "2026-11-21"
   }
 ]
