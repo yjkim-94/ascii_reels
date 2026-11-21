@@ -96,12 +96,12 @@ MAIN_PTS = sample_tree(MAIN)
 MAXPATH = MAIN[:, 5].max()
 TOUCH_PATH = 0.30
 LIGHT_SPEED = MAXPATH / 1.1
-TIPS = MAIN[MAIN[:, 4] >= 4][:, [2, 3, 5]]
-N_LEAF = 3000
+TIPS = MAIN[MAIN[:, 4] >= 3][:, [2, 3, 5]]
+N_LEAF = 5000
 _ti = rng.integers(0, len(TIPS), N_LEAF)
 LF_BX, LF_BY = TIPS[_ti, 0], TIPS[_ti, 1]
-LF_X = LF_BX + rng.normal(0, 0.045, N_LEAF)
-LF_Y = LF_BY + rng.normal(0, 0.035, N_LEAF)
+LF_X = LF_BX + rng.normal(0, 0.06, N_LEAF)
+LF_Y = LF_BY + rng.normal(0, 0.045, N_LEAF)
 LF_T = T_TOUCH + np.abs(TIPS[_ti, 2] - TOUCH_PATH) / LIGHT_SPEED \
     + rng.uniform(0, 0.25, N_LEAF)
 LF_K = rng.integers(0, 10, N_LEAF)
@@ -114,13 +114,13 @@ FAR_B = np.array([0.050, 0.035, 0.060, 0.045, 0.040, 0.060, 0.070])
 FAR = []
 for i, (x, s_, b) in enumerate(zip(FAR_X, FAR_S, FAR_B)):
     segs = make_tree(x, s_, 6, 100 + i)
-    tips = segs[segs[:, 4] >= 4][:, [2, 3]]
-    n = 285
+    tips = segs[segs[:, 4] >= 3][:, [2, 3]]
+    n = 600
     k = rng.integers(0, len(tips), n)
     FAR.append(dict(pts=sample_tree(segs), base=b,
                     bx=tips[k, 0], by=tips[k, 1],
-                    lx=tips[k, 0] + rng.normal(0, 0.03, n),
-                    ly=tips[k, 1] + rng.normal(0, 0.022, n),
+                    lx=tips[k, 0] + rng.normal(0, 0.042, n),
+                    ly=tips[k, 1] + rng.normal(0, 0.032, n),
                     lt=rng.uniform(0, 0.35, n),
                     lk=rng.integers(0, 10, n),
                     ph=rng.uniform(0, 2 * np.pi, n)))
@@ -161,9 +161,9 @@ SKY = vgradient([(0.0, SKY_TOP), (0.62, SKY_LOW), (GROUND, (0.28, 0.18,
 RIDGE = (PY > 0.71 - 0.02 * noise2d(256, 2.5, 3)[0][(
     (PX + 1) * 120).astype(int) % 256]) & (PY < GROUND)
 MIST = noise2d(128, beta=1.8, seed=4)
-N_GRASS = 320
+N_GRASS = 700
 GR_X = rng.uniform(-1, 1, N_GRASS)
-GR_Y = rng.uniform(GROUND + 0.004, 0.85, N_GRASS)
+GR_Y = rng.uniform(GROUND + 0.004, 1.0, N_GRASS)
 N_FLY = 80
 FY_X = rng.uniform(-0.95, 0.95, N_FLY)
 FY_Y = rng.uniform(0.25, 0.78, N_FLY)
@@ -257,7 +257,7 @@ def goddess(t, a_g, sp):
     # side profile facing right: brow, nose, lips, chin
     face = (v > 0.83) & (v < 0.97) & (u > hx) & (u < hx + np.interp(
         v, [0.83, 0.85, 0.875, 0.895, 0.915, 0.94, 0.97],
-        [0.045, 0.060, 0.072, 0.092, 0.082, 0.080, 0.060]))
+        [0.048, 0.058, 0.066, 0.078, 0.071, 0.069, 0.055]))
     inner = body & (np.abs(u) < half - 0.03)
     edge = body & ~inner
     fold = np.cos(u / np.maximum(half, 1e-3) * np.pi * 2.5
@@ -310,8 +310,15 @@ def goddess(t, a_g, sp):
         hx_ += (ox - hx_) * spread
         hy_ += (oy - hy_) * spread
         col = SKIN * (1.0 if side == 1 else 0.7) * a_g
-        strand(sx + (hx_ - sx) * s16, sy + (hy_ - sy) * s16,
-               np.broadcast_to(col, (18, 3)))
+        ax, ay = hx_ - sx, (hy_ - sy) * ASPECT
+        nl = max(np.hypot(ax, ay), 1e-6)
+        nx, ny = -ay / nl, ax / nl             # across the arm
+        for k, off in enumerate((-1.5, -0.5, 0.5, 1.5)):
+            w = 0.006 * (1 + 0.8 * (1 - s16))  # wider sleeve at top
+            xs = sx + ax * s16 + nx * off * w
+            ys = sy + (hy_ - sy) * s16 + ny * off * w / ASPECT
+            c = np.where((s16 < 0.55)[:, None], DRESS * 1.6 * a_g, col)
+            strand(xs, ys, c)
         sp["x"].append(hx_)
         sp["y"].append(hy_)
         sp["ch"].append("o")
